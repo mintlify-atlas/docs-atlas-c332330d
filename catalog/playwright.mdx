@@ -1,0 +1,245 @@
+---
+title: "Playwright CLI Skill: Browser Automation in Codex"
+sidebarTitle: "Playwright"
+description: "Drive real browsers from the terminal using playwright-cli: navigate, snapshot, click, fill forms, extract data, and capture screenshots."
+---
+
+The **playwright** skill gives Codex a full headless (or headed) browser it can drive entirely from the terminal. It wraps `playwright-cli` in a bundled shell script so the CLI works via `npx` even without a global install, and it establishes a consistent element-reference model — snapshot first, then interact using stable refs — that keeps automation reliable across navigation and dynamic UI changes.
+
+## Trigger Conditions
+
+Codex activates this skill when you ask it to:
+
+- Automate a browser workflow or user journey
+- Navigate to a URL and interact with the page
+- Fill a form, click a button, or submit data in a browser
+- Take a screenshot or PDF of a page
+- Extract text or structured data from a live page
+- Debug a UI flow with traces or console inspection
+
+## Prerequisite Check
+
+Before proposing any commands, the skill verifies that `npx` is available, because the wrapper depends on it:
+
+```bash
+command -v npx >/dev/null 2>&1
+```
+
+If `npx` is missing, the skill pauses and asks you to install Node.js/npm:
+
+```bash
+# Verify Node/npm are installed
+node --version
+npm --version
+
+# If missing, install Node.js/npm, then:
+npm install -g @playwright/cli@latest
+playwright-cli --help
+```
+
+Once `npx` is present the wrapper script takes over. A global install of `playwright-cli` is optional.
+
+## Setting Up the Wrapper Script
+
+The skill sets `$PWCLI` once per session so every command goes through the bundled wrapper:
+
+```bash
+export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+export PWCLI="$CODEX_HOME/skills/playwright/scripts/playwright_cli.sh"
+```
+
+User-scoped skills install under `$CODEX_HOME/skills` (default: `~/.codex/skills`).
+
+You can add a convenience alias:
+
+```bash
+alias pwcli="$PWCLI"
+```
+
+The wrapper calls `npx --package @playwright/cli playwright-cli` internally, so the CLI runs without a global install. Use `"$PWCLI"` unless your repo already standardizes on a global install.
+
+## Key Commands
+
+### Core interaction
+
+```bash
+"$PWCLI" open https://example.com        # Open a URL in the browser
+"$PWCLI" open https://example.com --headed  # Open with a visible window
+"$PWCLI" snapshot                        # Capture element refs (required before clicking)
+"$PWCLI" click e3                        # Click element by ref
+"$PWCLI" dblclick e7                     # Double-click
+"$PWCLI" fill e5 "user@example.com"      # Fill an input field
+"$PWCLI" type "search terms"             # Type into the focused element
+"$PWCLI" press Enter                     # Send a key press
+"$PWCLI" hover e4                        # Hover over an element
+"$PWCLI" select e9 "option-value"        # Select a dropdown option
+"$PWCLI" check e12                       # Check a checkbox
+"$PWCLI" screenshot                      # Save a screenshot
+"$PWCLI" pdf                             # Save a PDF
+"$PWCLI" close                           # Close the browser
+```
+
+### Navigation
+
+```bash
+"$PWCLI" go-back
+"$PWCLI" go-forward
+"$PWCLI" reload
+"$PWCLI" resize 1920 1080
+```
+
+### Data extraction
+
+```bash
+"$PWCLI" eval "document.title"
+"$PWCLI" eval "el => el.textContent" e12
+```
+
+### DevTools & tracing
+
+```bash
+"$PWCLI" console warning
+"$PWCLI" network
+"$PWCLI" tracing-start
+"$PWCLI" tracing-stop
+```
+
+### Tabs
+
+```bash
+"$PWCLI" tab-new https://example.com/page
+"$PWCLI" tab-list
+"$PWCLI" tab-select 0
+"$PWCLI" tab-close
+```
+
+## Core Workflow
+
+<Steps>
+  <Step title="Open the page">
+    ```bash
+    "$PWCLI" open https://example.com
+    ```
+  </Step>
+  <Step title="Snapshot to get element refs">
+    ```bash
+    "$PWCLI" snapshot
+    ```
+    Always snapshot before referencing element IDs like `e3`. Refs become stale after navigation or significant DOM changes — snapshot again whenever a command fails with a missing ref.
+  </Step>
+  <Step title="Interact using refs from the snapshot">
+    ```bash
+    "$PWCLI" click e3
+    "$PWCLI" fill e5 "user@example.com"
+    ```
+  </Step>
+  <Step title="Re-snapshot after navigation or DOM changes">
+    ```bash
+    "$PWCLI" snapshot
+    ```
+    Snapshot again after: navigation, clicks that change the UI substantially, opening/closing modals or menus, and tab switches.
+  </Step>
+  <Step title="Capture artifacts">
+    ```bash
+    "$PWCLI" screenshot
+    "$PWCLI" pdf
+    ```
+    Store artifacts under `output/playwright/` to avoid introducing new top-level folders.
+  </Step>
+</Steps>
+
+## Common Workflows
+
+<CodeGroup>
+```bash Form Fill and Submit
+"$PWCLI" open https://example.com/form
+"$PWCLI" snapshot
+"$PWCLI" fill e1 "user@example.com"
+"$PWCLI" fill e2 "password123"
+"$PWCLI" click e3
+"$PWCLI" snapshot
+"$PWCLI" screenshot
+```
+
+```bash Data Extraction
+"$PWCLI" open https://example.com
+"$PWCLI" snapshot
+"$PWCLI" eval "document.title"
+"$PWCLI" eval "el => el.textContent" e12
+```
+
+```bash Debug a UI Flow with Traces
+"$PWCLI" open https://example.com --headed
+"$PWCLI" tracing-start
+# ...interactions...
+"$PWCLI" tracing-stop
+"$PWCLI" screenshot
+```
+
+```bash Multi-Tab Work
+"$PWCLI" tab-new https://example.com
+"$PWCLI" tab-list
+"$PWCLI" tab-select 0
+"$PWCLI" snapshot
+```
+</CodeGroup>
+
+## Sessions
+
+Use named sessions to isolate work across projects:
+
+```bash
+"$PWCLI" --session todo open https://demo.playwright.dev/todomvc
+"$PWCLI" --session todo snapshot
+```
+
+Or set the session once as an environment variable:
+
+```bash
+export PLAYWRIGHT_CLI_SESSION=checkout
+"$PWCLI" open https://example.com/checkout
+```
+
+## Configuration File
+
+The CLI reads `playwright-cli.json` from the current directory by default. Use `--config` to point at a specific file. Minimal example:
+
+```json
+{
+  "browser": {
+    "launchOptions": {
+      "headless": false
+    },
+    "contextOptions": {
+      "viewport": { "width": 1280, "height": 720 }
+    }
+  }
+}
+```
+
+## Guardrails
+
+<Tip>
+  Always snapshot before referencing element IDs. When a command fails because a ref is stale, run `"$PWCLI" snapshot` again and retry with the new ref.
+</Tip>
+
+- Prefer explicit commands over `eval` and `run-code` unless the task requires them.
+- When you do not have a fresh snapshot, use placeholder refs like `eX` and explain why — do not bypass refs with `run-code`.
+- Use `--headed` when a visual check will help.
+- Default to CLI commands and workflows, not Playwright test specs (`@playwright/test`). Use test specs only if you explicitly ask for them.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Element ref fails | Run `"$PWCLI" snapshot` again and retry with the new ref |
+| Page looks wrong | Re-open with `--headed` and `resize` the window |
+| Flow needs prior state | Use a named `--session` |
+
+## Installing
+
+```bash
+$skill-installer playwright
+```
+
+Restart Codex after installation to pick up the new skill.

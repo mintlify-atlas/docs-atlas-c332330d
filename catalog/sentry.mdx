@@ -1,0 +1,139 @@
+---
+title: "Sentry Skill: Error Monitoring and Debugging"
+sidebarTitle: "Sentry"
+description: "Inspect Sentry issues, summarize recent production errors, and get AI root-cause analysis and fix plans directly inside Codex via the Sentry CLI."
+---
+
+The `sentry` skill gives Codex **read-only access** to your Sentry workspace through the `sentry` CLI, letting you investigate production errors, triage unresolved issues, and pull AI-generated root-cause and fix plans — all without leaving your editor. Instead of bouncing between Codex and the Sentry dashboard, you can describe what you are investigating in plain language and have Codex run the right queries and present the findings.
+
+## Trigger conditions
+
+Activate the `sentry` skill whenever you want to pull error data from Sentry. Common triggers include:
+
+- "Show me the top open errors in production from the last 24 hours"
+- "Investigate issue ABC-123 and suggest a fix"
+- "What is the root cause of the latest `NullPointerException`?"
+- "List unresolved high-priority issues assigned to me"
+- "Summarize recent production errors for this service"
+
+## What it enables
+
+<CardGroup cols={2}>
+  <Card title="Issue Listing & Triage" icon="list">
+    List unresolved issues filtered by environment, time range, priority, and search query. Results include title, short ID, status, first/last seen, count, and top tags.
+  </Card>
+  <Card title="Issue & Event Detail" icon="magnifying-glass">
+    Drill into any issue by short ID to view the full detail, then step through individual events including culprit, timestamp, environment, release, and URL.
+  </Card>
+  <Card title="AI Root-Cause Analysis" icon="brain">
+    Run `sentry issue explain` to get an AI-generated summary of what caused an issue and the conditions under which it fires.
+  </Card>
+  <Card title="AI Fix Plans" icon="wrench">
+    Run `sentry issue plan` to receive a prioritized, actionable fix plan for any issue that you can bring directly into your coding session.
+  </Card>
+</CardGroup>
+
+## Core CLI commands
+
+The skill uses the `sentry` CLI for all queries. The CLI auto-detects your org and project from DSNs in `.env` files, source code, and directory names — you only need to specify `{your-org}/{your-project}` if auto-detection picks the wrong target.
+
+**List the top unresolved issues (last 24 h, production):**
+
+```bash
+sentry issue list \
+  --query "is:unresolved environment:production" \
+  --period 24h \
+  --limit 20 \
+  --json --fields shortId,title,priority,level,status
+```
+
+**View an issue by short ID:**
+
+```bash
+sentry issue view ABC-123 --json
+```
+
+**Browse events for an issue:**
+
+```bash
+sentry issue events ABC-123 --limit 20 --json
+```
+
+**AI root-cause analysis:**
+
+```bash
+sentry issue explain ABC-123
+```
+
+**AI fix plan:**
+
+```bash
+sentry issue plan ABC-123
+```
+
+**Arbitrary API access (for endpoints not covered by CLI commands):**
+
+```bash
+sentry api /api/0/organizations/{your-org}/ --method GET
+```
+
+<Tip>
+  Use `sentry schema <resource>` to discover available API endpoints quickly, for example `sentry schema issues`.
+</Tip>
+
+## Defaults and inputs
+
+| Parameter | Default | How to override |
+|---|---|---|
+| Time range | `24h` | `--period 7d` (or any duration) |
+| Environment | `production` | `environment:staging` inside `--query` |
+| Result limit | `20` | `--limit 50` |
+| Output format | Human-readable | `--json` for programmatic use |
+
+## Authentication setup
+
+The Sentry CLI must be authenticated before the skill can run. If not yet set up:
+
+<Steps>
+  <Step title="Install the Sentry CLI">
+    ```bash
+    curl https://cli.sentry.dev/install -fsS | bash
+    ```
+  </Step>
+  <Step title="Authenticate">
+    ```bash
+    sentry auth login
+    ```
+    Or set the `SENTRY_AUTH_TOKEN` environment variable directly — never paste your token into the chat.
+  </Step>
+  <Step title="Confirm authentication">
+    ```bash
+    sentry auth status
+    ```
+  </Step>
+</Steps>
+
+## Default prompt
+
+When you install the skill, its default prompt is:
+
+> "Investigate this issue in read-only Sentry data and report likely root cause, impact, and next steps."
+
+## Output rules
+
+The skill follows these formatting conventions for safety and clarity:
+
+- Issue lists show: title, short ID, status, first seen, last seen, event count, environments, and top tags — ordered by most recent.
+- Event detail includes: culprit, timestamp, environment, release, and URL.
+- PII is redacted from output (emails, IP addresses). Raw stack traces are never printed in full.
+- Auth tokens are never echoed back.
+
+## Installing
+
+```bash
+$skill-installer sentry
+```
+
+<Note>
+  Restart Codex after installing to pick up the new skill.
+</Note>

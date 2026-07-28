@@ -1,28 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "OpenAI Skills",
+  "projectType": "general",
+  "projectName": "OpenAI Skills",
+  "projectDescription": "A catalog of modular, self-contained Agent Skills—folders of instructions, scripts, and reference materials that extend Codex's capabilities for specific tasks.",
   "theme": "luma",
-  "colors": {
-    "primary": "#040404",
-    "light": "#0c86f5",
-    "dark": "#7cc4fc"
-  },
-  "favicon": "https://media.brand.dev/778ac30c-f208-4158-82ab-90eef41e8ed6.png",
-  "logo": {
-    "light": "https://media.brand.dev/49d16169-af21-40d0-b640-49f896bccaef.svg",
-    "dark": "https://media.brand.dev/49d16169-af21-40d0-b640-49f896bccaef.svg"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/openai/skills"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/openai/skills"
-    }
-  },
+  "primaryColor": "#040404",
+  "lightColor": "#0c86f5",
+  "darkColor": "#7cc4fc",
   "navigation": {
     "tabs": [
       {
@@ -118,5 +101,28 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Modular skill folders with SKILL.md instructions, scripts, assets, and reference files",
+    "Progressive disclosure: metadata always in context, SKILL.md body loaded on trigger, bundled resources loaded on demand",
+    "System skills auto-installed with Codex (imagegen, openai-docs, skill-creator, skill-installer, plugin-creator)",
+    "Curated and experimental skill tiers for different maturity levels",
+    "skill-installer helper to list and install skills from GitHub by name or URL",
+    "openai.yaml agent UI metadata (display_name, short_description, default_prompt, icons, brand_color)",
+    "MCP tool dependencies declarable inside agents/openai.yaml",
+    "Skill creation tooling: init_skill.py, generate_openai_yaml.py, quick_validate.py"
+  ],
+  "publicApiSurface": [
+    "SKILL.md frontmatter: name, description (YAML)",
+    "agents/openai.yaml: interface.display_name, interface.short_description, interface.default_prompt, interface.icon_small, interface.icon_large, interface.brand_color",
+    "agents/openai.yaml: dependencies.tools[].type, .value, .description, .transport, .url",
+    "scripts/init_skill.py <skill-name> --path <dir> [--resources scripts,references,assets] [--examples] [--interface key=value]",
+    "scripts/generate_openai_yaml.py <skill-folder> --interface key=value",
+    "scripts/quick_validate.py <skill-folder>",
+    "scripts/install-skill-from-github.py --repo <owner>/<repo> --path <path> [--ref <ref>] [--dest <path>] [--method auto|download|git]",
+    "scripts/install-skill-from-github.py --url <github-tree-url>",
+    "scripts/list-skills.py [--path <folder>] [--format json]",
+    "$skill-installer <skill-name> (Codex in-chat install command)",
+    "Skill directory layout: SKILL.md (required), agents/ (recommended), scripts/, references/, assets/ (optional)"
+  ]
 }

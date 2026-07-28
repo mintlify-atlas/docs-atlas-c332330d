@@ -1,0 +1,107 @@
+---
+title: "GitHub PR Comment Skill: Address Review Comments"
+sidebarTitle: "PR Comments"
+description: "Find and address GitHub PR review comments using the gh CLI: fetch threads, summarize required fixes, and apply changes only after your approval."
+---
+
+The **gh-address-comments** skill guides Codex through the full lifecycle of a pull request review: it locates the open PR for the current branch, fetches every review thread and inline comment, presents a numbered summary to you, and applies targeted fixes only for the comments you approve. All `gh` calls run with elevated network access so GitHub API requests succeed even in sandboxed environments.
+
+## Trigger Conditions
+
+Codex activates this skill when you ask it to:
+
+- Address, resolve, or fix PR review comments
+- Respond to feedback left on a pull request
+- Clean up a review before merging
+- Handle review threads on the current branch
+
+## Prerequisites
+
+<Note>
+  The `gh` CLI must be authenticated before this skill runs. Unauthenticated calls will fail and the skill will prompt you to log in.
+</Note>
+
+Authenticate the GitHub CLI once with repo and workflow scopes:
+
+```bash
+gh auth login
+```
+
+Confirm auth status (the skill re-runs this with escalated permissions if the sandbox blocks it):
+
+```bash
+gh auth status
+```
+
+If `gh` hits auth or rate-limit errors mid-run, run `gh auth login` again and retry.
+
+## Three-Step Workflow
+
+<Steps>
+  <Step title="Inspect comments needing attention">
+    Codex runs the bundled `fetch_comments.py` script, which prints all review threads and inline comments on the PR associated with the current branch.
+
+    ```bash
+    python "$SKILL_PATH/scripts/fetch_comments.py"
+    ```
+
+    The script outputs a structured list of every open thread, including the file path, line number, author, and comment body.
+  </Step>
+
+  <Step title="Ask for your approval">
+    Codex numbers every thread and presents a concise summary of what each fix would require. You choose which numbered comments should be addressed before any code changes are made.
+
+    Example summary output:
+
+    ```
+    [1] src/auth.py:42 — @reviewer: "This token comparison isn't constant-time."
+        Fix: Replace == with hmac.compare_digest()
+
+    [2] README.md:10 — @reviewer: "Typo: 'recieve' → 'receive'"
+        Fix: Correct spelling
+
+    Which comments should be addressed? (e.g. 1 2 or "all")
+    ```
+  </Step>
+
+  <Step title="Apply fixes for selected comments">
+    Once you confirm, Codex applies targeted edits for each selected comment, commits the changes, and summarizes the diffs. Unselected threads are left untouched.
+  </Step>
+</Steps>
+
+## The `fetch_comments.py` Script
+
+The bundled script uses `gh` to retrieve all PR review threads and top-level comments in a single pass. It handles pagination automatically and prints output in a format that Codex can number and summarize.
+
+Key behaviors:
+
+- Resolves the current branch to its open PR automatically
+- Fetches both inline review comments and issue-style PR comments
+- Exits non-zero if no open PR is found, so automation pipelines can detect the error
+
+## Authentication Handling
+
+<CardGroup cols={2}>
+  <Card title="Normal auth flow" icon="key">
+    The skill runs `gh auth status` with `sandbox_permissions=require_escalated` to verify scopes. Repo and workflow scopes are required.
+  </Card>
+  <Card title="Mid-run auth failure" icon="triangle-exclamation">
+    If `gh` returns an auth or rate-limit error during comment fetching or fixing, the skill pauses and asks you to re-run `gh auth login` before retrying.
+  </Card>
+</CardGroup>
+
+## Default Prompt
+
+When launched directly from the Codex skill menu, this skill starts with:
+
+> "Address all actionable GitHub PR review comments in this branch and summarize the updates."
+
+You can override this at any time by typing a more specific instruction, such as "Only address comments from @alice" or "Fix the type errors mentioned in the review."
+
+## Installing
+
+```bash
+$skill-installer gh-address-comments
+```
+
+Restart Codex after installation to pick up the new skill.

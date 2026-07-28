@@ -1,0 +1,203 @@
+---
+title: "Transcribe Skill: Audio-to-Text with Diarization"
+sidebarTitle: "Transcribe"
+description: "Convert audio and video recordings to text with optional speaker diarization and known-speaker hints using the OpenAI transcription API."
+---
+
+The Transcribe skill converts audio and video files to text using the OpenAI transcription API, with optional speaker diarization for interviews and meetings. It defaults to fast plain-text output via `gpt-4o-mini-transcribe` and switches to labeled speaker segments when you request diarization. All runs use the bundled `scripts/transcribe_diarize.py` CLI for deterministic, repeatable results, and outputs land in `output/transcribe/`.
+
+## When to trigger this skill
+
+This skill activates when you ask Codex to:
+
+- **Transcribe speech** from an audio or video file
+- **Extract text from recordings** (podcasts, lectures, interviews, meetings)
+- **Label speakers** in multi-person conversations or interviews
+- **Convert voice memos** to written notes
+- **Process batch recordings** from `--out-dir`
+
+## Defaults
+
+| Setting | Value |
+|---|---|
+| Model | `gpt-4o-mini-transcribe` |
+| Response format | `text` |
+| Chunking strategy | `auto` |
+| Max file size | 25 MB per request |
+
+## Standard vs diarized transcription
+
+| Need | Model | `--response-format` |
+|---|---|---|
+| Fast plain text | `gpt-4o-mini-transcribe` | `text` |
+| Structured JSON | `gpt-4o-mini-transcribe` | `json` |
+| Speaker-labeled segments | `gpt-4o-transcribe-diarize` | `diarized_json` |
+
+<Note>
+  Prompting (`--prompt`) is **not** supported for `gpt-4o-transcribe-diarize`. Known-speaker references are only effective with that model (up to 4 speakers).
+</Note>
+
+## Workflow
+
+<Steps>
+  <Step title="Collect inputs">
+    Gather: audio file path(s), desired response format (`text`, `json`, or `diarized_json`), optional language hint, and any known-speaker reference audio files.
+  </Step>
+  <Step title="Verify OPENAI_API_KEY">
+    Confirm the key is exported in your shell. If missing, set it locally — never paste the full key into chat.
+  </Step>
+  <Step title="Run the bundled CLI">
+    Use `transcribe_diarize.py` with appropriate flags (see examples below). Default to `gpt-4o-mini-transcribe` + `text` for fast runs; switch to `gpt-4o-transcribe-diarize` + `diarized_json` when speaker labels are needed.
+  </Step>
+  <Step title="Validate output">
+    Check transcription quality, speaker label accuracy, and segment boundaries. Iterate with a single targeted change (different model, language hint, or chunking strategy) if needed.
+  </Step>
+</Steps>
+
+## Installing
+
+```bash
+$skill-installer transcribe
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## Environment
+
+`OPENAI_API_KEY` must be exported before any live API call.
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+## The bundled CLI
+
+Set a stable path to the CLI once per session:
+
+```bash
+export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+export TRANSCRIBE_CLI="$CODEX_HOME/skills/transcribe/scripts/transcribe_diarize.py"
+```
+
+### CLI flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `audio` (positional) | — | **Required.** One or more audio file paths |
+| `--model` | `gpt-4o-mini-transcribe` | Transcription model |
+| `--response-format` | `text` | Output format: `text`, `json`, or `diarized_json` |
+| `--chunking-strategy` | `auto` | Chunking strategy for long audio |
+| `--language` | — | Optional language hint (e.g. `en`) |
+| `--prompt` | — | Optional prompt to guide transcription (not for diarize model) |
+| `--known-speaker` | — | Known speaker as `NAME=PATH` (repeatable, max 4) |
+| `--out` | — | Output file path (single audio only) |
+| `--out-dir` | — | Output directory for multiple files |
+| `--stdout` | `false` | Write transcript to stdout instead of a file |
+| `--dry-run` | `false` | Validate inputs and print payload without calling the API |
+
+### Supported audio formats
+
+`mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `wav`, `webm`
+
+## CLI examples
+
+**Plain text transcription (default, fast):**
+
+```bash
+python3 "$TRANSCRIBE_CLI" \
+  path/to/audio.wav \
+  --out transcript.txt
+```
+
+**Explicit text output with language hint:**
+
+```bash
+python3 "$TRANSCRIBE_CLI" \
+  interview.mp3 \
+  --response-format text \
+  --language en \
+  --out interview.txt
+```
+
+**JSON output with structured segments:**
+
+```bash
+python3 "$TRANSCRIBE_CLI" \
+  lecture.m4a \
+  --response-format json \
+  --out lecture.json
+```
+
+**Diarization with known speakers (up to 4):**
+
+```bash
+python3 "$TRANSCRIBE_CLI" \
+  meeting.m4a \
+  --model gpt-4o-transcribe-diarize \
+  --known-speaker "Alice=refs/alice.wav" \
+  --known-speaker "Bob=refs/bob.wav" \
+  --response-format diarized_json \
+  --out-dir output/transcribe/meeting
+```
+
+**Dry run (validates inputs, no API call):**
+
+```bash
+python3 "$TRANSCRIBE_CLI" audio.wav --dry-run
+```
+
+**Multiple files to an output directory:**
+
+```bash
+python3 "$TRANSCRIBE_CLI" \
+  recordings/*.mp3 \
+  --response-format text \
+  --out-dir output/transcribe/batch
+```
+
+<Tip>
+  For audio longer than ~30 seconds, keep `--chunking-strategy auto` (the default) to let the API split and reassemble the audio automatically.
+</Tip>
+
+## Response format options
+
+<CardGroup cols={3}>
+  <Card title="text" icon="file-lines">
+    Plain UTF-8 transcript. Fast and readable. Saved as `.txt`.
+  </Card>
+  <Card title="json" icon="code">
+    Structured JSON with segments and timestamps. Saved as `.json`.
+  </Card>
+  <Card title="diarized_json" icon="users">
+    Speaker-labeled segments. Requires `gpt-4o-transcribe-diarize`. Saved as `.json`.
+  </Card>
+</CardGroup>
+
+## Output conventions
+
+| Path | Purpose |
+|---|---|
+| `output/transcribe/` | Default output location for final transcripts |
+| `output/transcribe/<job-id>/` | Isolated output for evaluation runs |
+
+Use `--out-dir` when processing multiple files to avoid overwriting earlier results.
+
+## Dependencies
+
+```bash
+# Preferred (uv)
+uv pip install openai
+
+# Fallback
+python3 -m pip install openai
+```
+
+## References included with this skill
+
+| File | Contents |
+|---|---|
+| `references/api.md` | Supported formats, file limits, response format notes, known-speaker guidance |
+
+<Warning>
+  Files larger than 25 MB will trigger a warning. Split large recordings into smaller chunks before transcribing.
+</Warning>

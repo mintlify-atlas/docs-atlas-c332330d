@@ -1,0 +1,203 @@
+---
+title: "Skill Installer: Add Skills to Codex"
+sidebarTitle: "Skill Installer"
+description: "Lists installable skills from the openai/skills curated catalog and installs them — or any skill from a GitHub repo — into your Codex environment."
+---
+
+The Skill Installer lets you browse the curated OpenAI skills catalog and add any skill to your Codex environment with a single request. Point it at a skill name, a folder path, or a full GitHub URL and it handles the download, resolves authentication for private repositories, and drops the skill into `$CODEX_HOME/skills/` where Codex picks it up automatically on the next turn. It also annotates the listing with which skills you already have installed so you always know what's available and what's new.
+
+<Note>
+  The Skill Installer is a **system skill** — it is pre-installed in every Codex environment and cannot be removed by users. The skills listed at `skills/.system` (including this one) are already installed and do not appear in the installable catalog.
+</Note>
+
+## What it does
+
+<CardGroup cols={2}>
+  <Card title="List available skills" icon="list">
+    Fetches the curated catalog from GitHub and shows each skill with an annotation if it's already installed.
+  </Card>
+  <Card title="Install by name" icon="download">
+    Installs any skill from the curated list by its slug name.
+  </Card>
+  <Card title="Install from a GitHub path" icon="github">
+    Installs a skill directly from any public or private GitHub repository using a repo path or a full tree URL.
+  </Card>
+  <Card title="Private repo support" icon="lock">
+    Authenticates via existing git credentials or `GITHUB_TOKEN` / `GH_TOKEN` for private repos.
+  </Card>
+</CardGroup>
+
+## When it triggers
+
+This skill activates when you:
+
+- Ask what skills are available to install
+- Ask to install a skill by name
+- Ask to install a skill from another GitHub repository
+- Ask to install an experimental skill
+
+## Install destination
+
+All skills land in:
+
+```
+$CODEX_HOME/skills/<skill-name>
+```
+
+`CODEX_HOME` defaults to `~/.codex`. The skill is available on your **next Codex turn** after installation.
+
+<Warning>
+  Installation aborts if the destination directory already exists. Use `--dest` to specify an alternate path, or manually remove the existing skill directory first.
+</Warning>
+
+## The three install methods
+
+### Method 1 — Install by name (from the curated catalog)
+
+```bash
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.curated/<skill-name>
+```
+
+### Method 2 — Install by folder path (any repo)
+
+```bash
+scripts/install-skill-from-github.py \
+  --repo <owner>/<repo> \
+  --path <path/to/skill> [<path/to/skill> ...]
+```
+
+Install multiple skills in one run by passing multiple `--path` values:
+
+```bash
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.curated/pdf-editor \
+  --path skills/.curated/csv-analyzer
+```
+
+### Method 3 — Install from a full GitHub tree URL
+
+```bash
+scripts/install-skill-from-github.py \
+  --url https://github.com/<owner>/<repo>/tree/<ref>/<path>
+```
+
+## Listing skills
+
+### List the curated catalog
+
+```bash
+scripts/list-skills.py
+```
+
+Output format:
+
+```
+Skills from openai/skills:
+1. pdf-editor
+2. csv-analyzer (already installed)
+3. bigquery
+...
+Which ones would you like installed?
+```
+
+### List as JSON (for scripting)
+
+```bash
+scripts/list-skills.py --format json
+```
+
+### List experimental skills
+
+```bash
+scripts/list-skills.py --path skills/.experimental
+```
+
+Installing an experimental skill by path:
+
+```bash
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.experimental/<skill-name>
+```
+
+## Helper script flags
+
+### `scripts/install-skill-from-github.py`
+
+| Flag | Description | Default |
+|---|---|---|
+| `--repo` | GitHub `owner/repo` slug | — |
+| `--path` | Skill path inside the repo (repeatable) | — |
+| `--url` | Full GitHub tree URL (alternative to `--repo`/`--path`) | — |
+| `--ref` | Branch, tag, or commit SHA | `main` |
+| `--dest` | Override the install destination directory | `$CODEX_HOME/skills` |
+| `--name` | Override the skill name (single install only) | basename of `--path` |
+| `--method` | Download strategy: `auto`, `download`, or `git` | `auto` |
+
+### `scripts/list-skills.py`
+
+| Flag | Description | Default |
+|---|---|---|
+| `--path` | Catalog path inside `openai/skills` | `skills/.curated` |
+| `--format` | Output format: default prose or `json` | prose |
+
+## Download behavior
+
+<Steps>
+  <Step title="Direct download (default)">
+    For public GitHub repos, the installer uses the GitHub API to download skill files directly — fast and requires no git tooling.
+  </Step>
+  <Step title="Git sparse checkout fallback">
+    If direct download fails with an auth or permission error, the installer falls back to `git sparse-checkout`. HTTPS is tried first, then SSH.
+  </Step>
+  <Step title="Private repo authentication">
+    Private repos are accessed via your existing git credentials. Set `GITHUB_TOKEN` or `GH_TOKEN` to use a personal access token for the download path.
+  </Step>
+</Steps>
+
+## Example workflows
+
+### Discover and install a skill
+
+Ask Codex:
+
+```
+What skills are available to install?
+```
+
+Codex will list the curated catalog with installed annotations and ask which ones you want.
+
+### Install a specific skill by name
+
+```
+Install the pdf-editor skill.
+```
+
+Codex will run `install-skill-from-github.py` targeting `skills/.curated/pdf-editor` in `openai/skills`.
+
+### Install from your own private repo
+
+```
+Install the analytics skill from github.com/my-org/my-repo at tools/skills/analytics.
+```
+
+Codex will resolve the repo and path, request sandbox escalation for network access, and install the skill.
+
+### Install an experimental skill
+
+```
+Show me the experimental skills and install the data-viz one.
+```
+
+Codex lists from `skills/.experimental`, then installs the requested skill.
+
+<Info>
+  All install scripts require **network access**. When running inside the Codex sandbox, Codex will request escalated permissions before executing any install command.
+</Info>
+
+## After installation
+
+Codex reports the installed skill name and destination path, then tells you the skill will be available on your next turn. System skills (`skills/.system`) are pre-installed and will never appear in the installable listing — if you ask about them, Codex will explain that they're already present.

@@ -1,0 +1,94 @@
+---
+title: "OpenAI Skills: Modular Agent Capabilities for Codex"
+sidebarTitle: "Introduction"
+description: "Modular skill folders that extend Codex with specialized workflows and domain expertise — organized across system, curated, and experimental tiers."
+---
+
+Agent Skills are self-contained folders of instructions, scripts, and resources that extend Codex with specialized capabilities. Rather than requiring you to re-explain a workflow every session, a skill packages that knowledge once so Codex can discover and apply it automatically — every time, without prompting. This is the central idea: write once, use everywhere.
+
+## What are Agent Skills?
+
+A skill transforms Codex from a general-purpose coding agent into a specialist. Skills provide four categories of value:
+
+1. **Specialized workflows** — Multi-step procedures for specific domains (e.g., addressing GitHub PR review comments with the `gh` CLI)
+2. **Tool integrations** — Instructions for working with specific APIs, file formats, or external services
+3. **Domain expertise** — Company-specific schemas, business logic, and policies that no pre-trained model can fully possess
+4. **Bundled resources** — Scripts, reference documents, and asset templates for complex or repetitive tasks
+
+When a user's request matches a skill's purpose, Codex automatically loads that skill's guidance and executes with the additional context — no extra prompting required.
+
+## The Three-Tier System
+
+The skills catalog is organized into three tiers, each with a different installation path:
+
+<CardGroup cols={3}>
+  <Card title="System" icon="gear">
+    Pre-installed in every Codex environment. The `skill-creator` and `skill-installer` skills live here. No installation step needed.
+  </Card>
+  <Card title="Curated" icon="star">
+    Vetted skills in the `skills/.curated` folder. Install by name using `$skill-installer gh-address-comments`.
+  </Card>
+  <Card title="Experimental" icon="flask">
+    Community and work-in-progress skills in `skills/.experimental`. Install by folder name or GitHub URL.
+  </Card>
+</CardGroup>
+
+Skills in the **system** tier are automatically available in the latest version of Codex. **Curated** skills are stable and tested; install them by name. **Experimental** skills may change — install them by specifying the `.experimental` folder or a full GitHub URL.
+
+## What a Skill Contains
+
+Every skill lives in a named directory. The only required file is `SKILL.md`; everything else is optional:
+
+```
+skill-name/
+├── SKILL.md          ← required: frontmatter + instructions
+├── agents/
+│   └── openai.yaml  ← recommended: UI metadata and tool dependencies
+├── scripts/         ← optional: executable Python/Bash scripts
+├── references/      ← optional: documentation loaded into context as needed
+└── assets/          ← optional: templates, images, boilerplate (not loaded into context)
+```
+
+The `SKILL.md` file has two parts: a YAML **frontmatter** block with `name` and `description` fields, and a Markdown **body** with instructions. The description is the primary trigger — Codex reads it to decide whether the skill is relevant to a given request. The body is only loaded after the skill triggers.
+
+## The Progressive Disclosure Model
+
+Skills use a three-level loading strategy to avoid consuming too much of Codex's context window:
+
+| Level | What loads | When | Size |
+|---|---|---|---|
+| **Metadata** | `name` + `description` from frontmatter | Always in context | ~100 words |
+| **SKILL.md body** | Full instruction document | After skill triggers | < 5k words |
+| **Bundled resources** | Scripts, references, assets | On demand, as needed | Unlimited |
+
+The metadata always sits in context so Codex can recognize when to activate a skill. The body is only loaded when the skill is triggered. Reference files and scripts are loaded or executed only when Codex decides they are needed for the task — keeping the context window as clean as possible.
+
+## When NOT to Add a Skill
+
+<Note>
+  Codex is already very smart. Before adding a skill, ask: "Does Codex really need this explanation?" and "Does this paragraph justify its token cost?" Only add context that Codex genuinely doesn't already have — domain-specific schemas, proprietary workflows, niche API quirks. Verbose explanations of things Codex already knows well just consume tokens without adding value.
+</Note>
+
+Good candidates for skills include:
+
+- Company-specific database schemas or business logic
+- Workflows that involve fragile, error-prone sequences (e.g., PDF manipulation, deploy pipelines)
+- Repetitive tasks where deterministic scripts outperform ad-hoc code generation
+- Tasks requiring external documentation (API specs, legal policies, brand guidelines)
+
+Poor candidates for skills include:
+
+- General programming patterns Codex already handles well
+- Single-use instructions better suited to a direct prompt
+- Auxiliary documentation about how a skill was built, tested, or changed
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install your first skill and use it in Codex in under five minutes.
+  </Card>
+  <Card title="Skill Catalog" icon="book" href="/installing-skills">
+    Browse curated and experimental skills, and learn all installation methods.
+  </Card>
+</CardGroup>

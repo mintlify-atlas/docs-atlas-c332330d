@@ -1,0 +1,172 @@
+---
+title: "WinUI App Skill: Build Windows Apps in Codex"
+sidebarTitle: "WinUI"
+description: "Bootstrap, develop, and design modern WinUI 3 desktop apps with C#, the Windows App SDK, and Fluent Design principles inside Codex."
+---
+
+The WinUI App skill grounds Codex in official Microsoft guidance for building native Windows desktop applications with WinUI 3 and the Windows App SDK. Rather than guessing at project structure or toolchain requirements, Codex follows a verified setup-and-scaffold flow, selects the right packaging model, applies Fluent Design principles, and launches the finished app to confirm it opens a real top-level window. The skill covers the full development lifecycle—from environment readiness checks and first scaffold through controls, theming, accessibility, performance, and deployment.
+
+<Note>
+  This skill targets **Windows only**. The WinGet bootstrap and `dotnet new winui`
+  scaffold require a Windows machine with the correct SDK and Visual Studio
+  workloads installed.
+</Note>
+
+## Installing
+
+```bash
+$skill-installer winui-app
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## What This Skill Enables
+
+<CardGroup cols={2}>
+  <Card title="Environment Setup" icon="screwdriver-wrench">
+    Verify machine readiness, run the bundled WinGet bootstrap, and confirm
+    Developer Mode, Visual Studio, and Windows App SDK workloads are in place.
+  </Card>
+  <Card title="App Scaffolding" icon="folder-open">
+    Scaffold a new WinUI 3 app with `dotnet new winui`, select packaged or
+    unpackaged deployment, and verify the build and launch.
+  </Card>
+  <Card title="UI Implementation" icon="paintbrush">
+    Build controls, adaptive layouts, navigation shells, command bars, and
+    custom title bars using native WinUI controls and Fluent Design guidance.
+  </Card>
+  <Card title="Theming & Styling" icon="palette">
+    Apply Mica materials, dark/light mode support, system brushes, typography
+    scales, and icon resources using WinUI styling hooks.
+  </Card>
+  <Card title="Accessibility & Input" icon="universal-access">
+    Meet accessibility baselines, add keyboard navigation, and apply
+    localization patterns using official platform guidance.
+  </Card>
+  <Card title="Performance & Testing" icon="gauge">
+    Diagnose UI-thread responsiveness issues and run review checklists before
+    marking work complete.
+  </Card>
+</CardGroup>
+
+## Trigger Conditions
+
+Codex activates this skill for any task involving:
+
+- Creating a brand-new WinUI 3 desktop application
+- Preparing a Windows machine for WinUI development
+- Reviewing, refactoring, or planning a WinUI app
+- Environment readiness checks or toolchain setup
+- WinUI XAML, controls, navigation, windowing, theming, accessibility, responsiveness, performance, or deployment
+
+## Prerequisites
+
+The skill's bundled `config.yaml` bootstrap handles installation automatically. It uses WinGet DSC to:
+
+- Enable **Developer Mode** on Windows
+- Install or update **Visual Studio Community 2026**
+- Install the **Managed Desktop**, **Universal**, and **Windows App SDK C#** workloads
+
+Run the bootstrap from the skill directory (keeping the relative path as `config.yaml`):
+
+```powershell
+winget configure -f config.yaml --accept-configuration-agreements --disable-interactivity
+```
+
+After the bootstrap completes, verify that the WinUI template is available:
+
+```powershell
+dotnet new list winui
+```
+
+<Warning>
+  Codex will not guess whether the machine is ready. If `config.yaml` is
+  missing or the bootstrap fails and the `winui` template is still unavailable,
+  it will stop and report the blocker clearly rather than proceeding with a
+  broken environment.
+</Warning>
+
+## Scaffolding a New App
+
+Once the environment is verified, scaffold with:
+
+```powershell
+dotnet new winui -o <AppName>
+```
+
+Supported template options:
+
+| Flag | Description |
+|------|-------------|
+| `-f net10.0\|net9.0\|net8.0` | Target framework |
+| `-slnx` | Use `.slnx` solution format |
+| `-cpm` | Enable Central Package Management |
+| `-mvvm` | Include MVVM structure |
+| `-imt` | Include MVVM Toolkit |
+| `-un` | Unpackaged deployment |
+| `-nsf` | Omit solution file |
+| `--force` | Overwrite existing files (only when explicitly requested) |
+
+After scaffolding, Codex builds the project and launches the app to confirm a real top-level window appears before returning control.
+
+## Packaging Model
+
+Codex makes the packaging choice explicit before writing any startup, storage, or launch code:
+
+- **Packaged** — default for Store-like workflows, Visual Studio F5 deploy, and apps that need package identity or package-backed APIs.
+- **Unpackaged** — use when repeatable CLI build-and-run loops or direct `.exe` launches are the normal local workflow.
+
+## Reference Categories
+
+The skill ships with focused reference files. Codex reads only the files relevant to the task at hand:
+
+<Steps>
+  <Step title="Foundation: Setup & Project Selection">
+    Starting from scratch, choosing a project template, or verifying what a
+    WinUI machine needs — `references/foundation-setup-and-project-selection.md`
+  </Step>
+  <Step title="Foundation: App Structure">
+    Reviewing app structure, pages, resources, and bindings —
+    `references/foundation-winui-app-structure.md`
+  </Step>
+  <Step title="Controls, Layout & Adaptive UI">
+    Choosing controls or responsive layout patterns —
+    `references/controls-layout-and-adaptive-ui.md`
+  </Step>
+  <Step title="Shell, Navigation & Windowing">
+    Choosing shell, navigation, title bar, or multi-window patterns —
+    `references/shell-navigation-and-windowing.md`
+  </Step>
+  <Step title="Styling, Theming, Materials & Icons">
+    Applying Mica, theming, typography, icons, and Fluent styling —
+    `references/styling-theming-materials-and-icons.md`
+  </Step>
+  <Step title="Accessibility, Input & Localization">
+    Improving accessibility, keyboarding, and localization —
+    `references/accessibility-input-and-localization.md`
+  </Step>
+  <Step title="Performance Diagnostics & Responsiveness">
+    Diagnosing responsiveness or UI-thread performance issues —
+    `references/performance-diagnostics-and-responsiveness.md`
+  </Step>
+  <Step title="Testing, Debugging & Review Checklists">
+    Running a review checklist before marking work complete —
+    `references/testing-debugging-and-review-checklists.md`
+  </Step>
+</Steps>
+
+## Design Principles
+
+Codex follows these WinUI-specific design constraints by default:
+
+- **Fluent first** — native WinUI controls and interactions are the default path. Custom chrome replaces stock behavior only when explicitly requested or when a verified platform gap exists.
+- **Dark and light mode** — all UI output supports both themes via system brushes and theme-aware resources unless the user requests a single-theme result.
+- **Command surfaces** — use `CommandBar` or other stock WinUI command surfaces before building custom button rows with `Grid` or `StackPanel`.
+- **CommunityToolkit** — added only when built-in WinUI controls or helpers don't cover the need cleanly.
+- **Responsiveness** — explicit wide, medium, and narrow-width behaviour for navigation, padding, content density, and footer regions.
+
+## Default Prompt
+
+```text
+Create a new $winui-app desktop app for me.
+```

@@ -1,0 +1,128 @@
+---
+title: "Security Best Practices Skill: Secure Code Review"
+sidebarTitle: "Security"
+description: "Review and write secure code in Codex with framework-specific guidance for Python, JavaScript/TypeScript, and Go backends and frontends."
+---
+
+The `security-best-practices` skill turns Codex into a security-aware coding assistant for your specific stack. When triggered, it inspects the languages and frameworks in your project, loads the matching security reference from its built-in library, and uses that guidance to write secure-by-default code, flag critical vulnerabilities passively while you work, or produce a full prioritized security report on demand.
+
+## Trigger conditions
+
+The skill activates **only when you explicitly ask for security help**. Common triggers include:
+
+- "Review this codebase for security best practices"
+- "Write a secure-by-default auth endpoint"
+- "Give me a security report for this project"
+- "Scan for vulnerabilities in this API"
+- "Help me implement secure file uploads"
+
+<Warning>
+  This skill does **not** trigger for general code review, debugging, or refactoring tasks. It is reserved for explicit security requests to keep its guidance focused and accurate.
+</Warning>
+
+## Supported frameworks and languages
+
+The skill ships with dedicated security references for the following stacks:
+
+<CardGroup cols={3}>
+  <Card title="Python · FastAPI" icon="python">
+    Full coverage of ASGI/Starlette security, auth, CORS, CSRF, SQL injection, file uploads, and more.
+  </Card>
+  <Card title="Python · Flask" icon="python">
+    Flask-specific patterns: Blueprints, session security, Jinja2 template safety, and common web vulnerabilities.
+  </Card>
+  <Card title="Python · Django" icon="python">
+    Django ORM safety, CSRF middleware, authentication backends, and settings hardening.
+  </Card>
+  <Card title="JavaScript · Express" icon="js">
+    Express middleware security, Helmet.js, rate limiting, input validation, and injection prevention.
+  </Card>
+  <Card title="TypeScript · Next.js" icon="js">
+    Next.js API route security, server-side rendering safety, and full-stack auth patterns.
+  </Card>
+  <Card title="TypeScript · React" icon="react">
+    XSS prevention, dangerouslySetInnerHTML auditing, dependency hygiene, and CSP for React SPAs.
+  </Card>
+  <Card title="TypeScript · Vue" icon="vuejs">
+    Vue template safety, v-html risks, CSP, and component-level input handling.
+  </Card>
+  <Card title="JavaScript · jQuery" icon="js">
+    Legacy frontend risks: DOM-based XSS, `.html()` / `.append()` sinks, and safe DOM manipulation patterns.
+  </Card>
+  <Card title="Go · General Backend" icon="golang">
+    Go web security fundamentals: SQL safety, TLS config, secure HTTP headers, and input validation.
+  </Card>
+</CardGroup>
+
+<Tip>
+  For full-stack projects the skill checks **both** frontend and backend references. If your frontend framework is not specified, it automatically loads `javascript-general-web-frontend-security` as a baseline.
+</Tip>
+
+## How it works
+
+<Steps>
+  <Step title="Identify the stack">
+    Codex inspects the project to determine all languages and primary frameworks — both frontend and backend. It lists its evidence before proceeding.
+  </Step>
+  <Step title="Load matching references">
+    The skill loads every relevant reference file from its `references/` directory using the naming pattern `<language>-<framework>-<stack>-security.md`. All matching files are read in full.
+  </Step>
+  <Step title="Apply guidance">
+    With the framework-specific rules loaded, Codex operates in one of three modes (see below).
+  </Step>
+</Steps>
+
+## Operating modes
+
+<CardGroup cols={3}>
+  <Card title="Secure-by-default generation" icon="shield-check">
+    The primary mode. When writing new code, every MUST requirement from the loaded references is followed automatically — safe APIs, proven libraries, no risky sinks.
+  </Card>
+  <Card title="Passive review" icon="eye">
+    Always active while editing. Critical or high-impact vulnerabilities found in touched code are surfaced immediately with a brief explanation and a safe fix.
+  </Card>
+  <Card title="Active audit" icon="file-magnifying-glass">
+    Triggered by an explicit scan request. Codex systematically searches the codebase, produces a prioritized `security_best_practices_report.md` with severity sections, and offers to fix findings one at a time.
+  </Card>
+</CardGroup>
+
+## What the references cover
+
+Using the Python FastAPI reference as a representative example, the guidance addresses:
+
+- **Deployment hardening** — disabling debug mode and auto-reload in production, production ASGI server configuration
+- **Authentication & authorization** — dependency-based auth enforcement, JWT validation, strict algorithm allowlists, password hashing (Argon2id / bcrypt), object-level and property-level authorization
+- **Session & cookie security** — `HttpOnly`, `Secure` (production only), `SameSite` flags, CSRF protection for cookie-authenticated endpoints
+- **Input validation** — schema-driven request parsing with Pydantic, mass assignment prevention, response model scoping to avoid excessive data exposure
+- **Injection prevention** — parameterized queries / ORM usage for SQL injection, safe subprocess invocation, SSRF mitigations for outbound HTTP
+- **Frontend safety** — XSS prevention via auto-escaping, server-side template injection (SSTI) avoidance, CSP recommendations
+- **Security headers** — `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, CORS least-privilege configuration
+- **Supply chain** — patching critical dependencies (FastAPI, Starlette, python-multipart) against known CVEs
+- **WebSocket security** — authentication during handshake, origin validation, rate limiting
+
+All other framework references follow the same depth and structure for their respective ecosystems.
+
+## Report format
+
+When you request a full audit, the skill writes a `security_best_practices_report.md` file containing:
+
+1. **Executive summary** — a short overview of the most important findings
+2. **Severity sections** — Critical, High, Medium, Low — each finding numbered for easy reference
+3. **Per-finding detail** — rule ID, severity, file path + line numbers, evidence snippet, impact statement, recommended fix, and mitigation notes
+4. After writing the file, Codex summarizes the findings in chat and tells you where the report was saved.
+
+## Default prompt
+
+When you install the skill, its default prompt is:
+
+> "Review this codebase for security best practices and suggest secure-by-default improvements."
+
+## Installing
+
+```bash
+$skill-installer security-best-practices
+```
+
+<Note>
+  Restart Codex after installing to pick up the new skill.
+</Note>

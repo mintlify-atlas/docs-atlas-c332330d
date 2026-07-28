@@ -1,0 +1,147 @@
+---
+title: "Vercel Deploy Skill: Ship Apps from Codex"
+sidebarTitle: "Vercel"
+description: "Deploy apps to Vercel from Codex via CLI or a no-auth fallback script. Always previews first; production only when explicitly requested."
+---
+
+The Vercel Deploy skill lets Codex push any project to Vercel directly from your workspace. Say something like **"deploy my app"**, **"push this live"**, or **"create a preview deployment"** and Codex will pick up the intent, check for the Vercel CLI, and launch a deployment with a 10-minute timeout to handle even the largest builds. By default every deploy lands in a **preview environment** — production is only targeted when you explicitly ask for it.
+
+## Trigger Phrases
+
+Codex activates this skill when it detects deployment intent. Common phrases that trigger it:
+
+- "deploy my app"
+- "deploy and give me the link"
+- "push this live"
+- "create a preview deployment"
+- "ship it to Vercel"
+
+## Installing
+
+```bash
+$skill-installer vercel-deploy
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## Default Behavior
+
+<Note>
+  Every deployment is a **preview** unless you explicitly ask for production. This protects your live site while you iterate.
+</Note>
+
+Codex will never deploy to production unless you say something like "deploy to production" or "go live on prod."
+
+## How It Works
+
+<Steps>
+  <Step title="Check for Vercel CLI">
+    Codex runs a lightweight check — no escalated permissions needed:
+
+    ```bash
+    command -v vercel
+    ```
+  </Step>
+
+  <Step title="Deploy via CLI (primary path)">
+    If `vercel` is installed and authenticated, Codex deploys with a **10-minute timeout** (600,000 ms) to handle long builds:
+
+    ```bash
+    vercel deploy [path] -y
+    ```
+
+    The `-y` flag skips interactive prompts so the deploy runs unattended.
+  </Step>
+
+  <Step title="Fallback: deploy.sh (no auth required)">
+    If the CLI is missing or returns **"No existing credentials found"**, Codex automatically falls back to the bundled `deploy.sh` script — no Vercel account needed:
+
+    ```bash
+    skill_dir="<path-to-skill>"
+
+    # Deploy current directory
+    bash "$skill_dir/scripts/deploy.sh"
+
+    # Deploy a specific project path
+    bash "$skill_dir/scripts/deploy.sh" /path/to/project
+
+    # Deploy an existing tarball
+    bash "$skill_dir/scripts/deploy.sh" /path/to/project.tgz
+    ```
+  </Step>
+</Steps>
+
+## The Fallback Script
+
+`deploy.sh` is a self-contained deployment helper that works without a Vercel account. Here's what it does:
+
+<CardGroup cols={2}>
+  <Card title="Framework Detection" icon="magnifying-glass">
+    Reads `package.json` to identify the framework (Next.js, Remix, Astro, SvelteKit, Vite, and 40+ others). Detected framework is passed to the deploy API for optimized builds.
+  </Card>
+  <Card title="Project Packaging" icon="box-archive">
+    Stages project files into a temp directory, excludes `node_modules`, `.git`, and `.env` files, then creates a compressed tarball for upload.
+  </Card>
+  <Card title="Static HTML Handling" icon="file-code">
+    For projects without `package.json`, locates the single root HTML file and renames it to `index.html` if needed.
+  </Card>
+  <Card title="Build Polling" icon="rotate">
+    After upload, polls the preview URL every 5 seconds (up to 5 minutes) until it returns a non-5xx status, confirming the build is live.
+  </Card>
+</CardGroup>
+
+### Script Output
+
+The script returns a JSON payload with two key fields:
+
+```json
+{
+  "previewUrl": "https://your-project-abc123.vercel.app",
+  "claimUrl": "https://vercel.com/claim/abc123"
+}
+```
+
+Codex will surface both URLs. Tell the user:
+
+> "Your deployment is ready at `[previewUrl]`. Claim it at `[claimUrl]` to manage your deployment."
+
+<Tip>
+  The claim URL lets the user attach the anonymous deployment to their own Vercel account — useful for adding a custom domain, managing environment variables, or enabling analytics.
+</Tip>
+
+## Production Deploys
+
+Only run when the user explicitly requests it:
+
+```bash
+vercel deploy [path] --prod -y
+```
+
+<Warning>
+  Never add `--prod` unless the user says something like "deploy to production," "go live," or "push to prod." Preview is always the safe default.
+</Warning>
+
+## Escalated Network Access
+
+If the deploy fails due to network errors (timeouts, DNS failures, connection resets), Codex will ask before retrying with elevated sandbox permissions:
+
+```
+The deploy needs escalated network access to deploy to Vercel.
+I can rerun the command with escalated permissions — want me to proceed?
+```
+
+<Note>
+  Only the **deploy command** requires escalated permissions. The `command -v vercel` installation check always runs without escalation.
+</Note>
+
+## Timeout Considerations
+
+Vercel builds can take several minutes for large projects. Codex uses a **10-minute (600,000 ms) timeout** for the deploy command. If the CLI times out, consider:
+
+- Breaking the project into smaller deployments
+- Pre-building locally before deploying
+- Using the `deploy.sh` fallback, which has its own 5-minute build-ready polling loop
+
+## Output
+
+After a successful deployment, Codex returns the deployment URL. For fallback deployments the claim URL is also shown. Codex will **not** curl or fetch the deployed URL to verify it — the link is returned directly.

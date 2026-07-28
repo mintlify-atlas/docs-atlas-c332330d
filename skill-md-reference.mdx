@@ -1,0 +1,229 @@
+---
+title: "SKILL.md Reference: Frontmatter, Body, and Patterns"
+sidebarTitle: "SKILL.md"
+description: "Full reference for SKILL.md — required frontmatter fields, description writing guidelines, body structure patterns, and progressive disclosure rules."
+---
+
+`SKILL.md` is the only required file in any skill. It serves as both the trigger mechanism and the instruction set: the YAML frontmatter tells Codex when to activate the skill, and the Markdown body tells it what to do once activated. Getting these two parts right is the most important design decision in skill authoring.
+
+## Frontmatter
+
+The frontmatter block is YAML enclosed in `---` delimiters at the top of the file. Only two fields matter to Codex:
+
+```yaml
+---
+name: my-skill-name
+description: What this skill does and when to use it. Codex reads this to decide
+  whether the skill is relevant to a given request.
+---
+```
+
+<Note>
+  The `metadata:` sub-block that appears in some skills (e.g., `metadata: short-description: ...`) is **not** used by Codex for triggering or loading decisions. Only `name` and `description` determine when a skill activates. Metadata sub-fields exist for other tooling purposes and can be safely ignored when writing new skills.
+</Note>
+
+### `name` (required)
+
+The skill name. Must match the skill's directory name exactly. Rules: lowercase letters, digits, and hyphens only; maximum 64 characters; no leading or trailing hyphens.
+
+```yaml
+name: vercel-deploy
+```
+
+### `description` (required)
+
+The primary triggering mechanism. Codex reads the description of every installed skill on every turn to decide which skills are relevant. A weak description means the skill activates at the wrong time — or never.
+
+**Write the description to answer two questions:**
+
+1. *What does this skill do?*
+2. *When should Codex use it?*
+
+Include specific trigger phrases, file types, task contexts, and user request patterns. All "when to use" guidance must live in the description — not in the body. The body is only loaded after triggering, so a "When to Use This Skill" section in the body is useless for triggering decisions.
+
+**Good description:**
+
+```yaml
+description: Deploy applications and websites to Vercel. Use when the user
+  requests deployment actions like "deploy my app", "deploy and give me the
+  link", "push this live", or "create a preview deployment".
+```
+
+**Poor description:**
+
+```yaml
+description: Vercel deployment skill.
+```
+
+The poor version tells Codex what the skill is but not when to use it. A user asking to "push this live" would likely not trigger it.
+
+**Description constraints:**
+- Maximum 1024 characters
+- No angle brackets (`<` or `>`)
+- Should mention specific user request patterns, file types, or contexts
+
+## Body
+
+The body is the Markdown content below the closing `---` of the frontmatter. It is loaded into context only after the skill triggers. Write it for another instance of Codex, not for a human reader — concise, imperative, and focused on what the agent needs to know.
+
+### Writing Guidelines
+
+- **Use imperative/infinitive form:** "Check whether the Vercel CLI is installed" not "You should check..."
+- **Keep under 500 lines:** Approaching this limit is a sign that content should be split into reference files.
+- **Prefer examples over explanations:** Codex is already very smart. Show a concrete command or code snippet rather than explaining what the command does in general terms.
+- **Reference bundled resources explicitly:** For every `scripts/`, `references/`, and `assets/` file, state clearly when Codex should use it.
+
+### The Four Structural Patterns
+
+Choose the structure that best fits the skill's purpose. These patterns can be mixed.
+
+**Pattern 1: Workflow-Based** — Best for sequential processes with clear decision points.
+
+```markdown
+# Vercel Deploy
+
+## Prerequisites
+...
+
+## Quick Start
+1. Check for Vercel CLI
+2. Run `vercel deploy`
+
+## Fallback (No Auth)
+...
+
+## Production Deploys
+...
+```
+
+**Pattern 2: Task-Based** — Best for skills that offer multiple distinct operations.
+
+```markdown
+# PDF Editor
+
+## Quick Start
+...
+
+## Merge PDFs
+...
+
+## Split PDFs
+...
+
+## Extract Text
+...
+```
+
+**Pattern 3: Reference/Guidelines** — Best for brand standards, coding policies, or specifications.
+
+```markdown
+# Brand Guidelines
+
+## Colors
+...
+
+## Typography
+...
+
+## Logo Usage
+...
+```
+
+**Pattern 4: Capabilities-Based** — Best for integrated systems that provide multiple interrelated features.
+
+```markdown
+# Product Management
+
+## Core Capabilities
+1. Context gathering
+2. Status updates
+3. Roadmap planning
+...
+```
+
+## What Goes in SKILL.md vs. Reference Files
+
+| Put in SKILL.md | Put in `references/` |
+|---|---|
+| Core workflow steps | Detailed API documentation |
+| Decision trees | Database schemas |
+| Essential commands | Comprehensive guides |
+| Navigation pointers to reference files | Examples and patterns |
+| Triggering context (in description) | Long reference material |
+
+<Warning>
+  Avoid duplicating content between SKILL.md and reference files. If a database schema lives in `references/schema.md`, do not also summarize it in SKILL.md. Instead, add a pointer: "For table schemas, read `references/schema.md`." Information should live in exactly one place.
+</Warning>
+
+## Complete Example: `vercel-deploy`
+
+The following is the real `vercel-deploy` skill — a well-structured, minimal SKILL.md that demonstrates the workflow-based pattern:
+
+```markdown
+---
+name: vercel-deploy
+description: Deploy applications and websites to Vercel. Use when the user
+  requests deployment actions like "deploy my app", "deploy and give me the
+  link", "push this live", or "create a preview deployment".
+---
+
+# Vercel Deploy
+
+Deploy any project to Vercel instantly. **Always deploy as preview** (not
+production) unless the user explicitly asks for production.
+
+## Prerequisites
+
+- Check whether the Vercel CLI is installed **without** escalated permissions
+  (for example, `command -v vercel`).
+- Only escalate the actual deploy command if sandboxing blocks the deployment
+  network calls (`sandbox_permissions=require_escalated`).
+- The deployment might take a few minutes. Use appropriate timeout values.
+
+## Quick Start
+
+1. Check whether the Vercel CLI is installed:
+
+\`\`\`bash
+command -v vercel
+\`\`\`
+
+2. If `vercel` is installed, run this (with a 10 minute timeout):
+
+\`\`\`bash
+vercel deploy [path] -y
+\`\`\`
+
+**Important:** Use a 10 minute (600000ms) timeout for the deploy command
+since builds can take a while.
+
+3. If `vercel` is not installed, or if the CLI fails with "No existing
+   credentials found", use the fallback method below.
+
+## Fallback (No Auth)
+
+If CLI fails with auth error, use the deploy script:
+
+\`\`\`bash
+skill_dir="<path-to-skill>"
+bash "$skill_dir/scripts/deploy.sh"
+\`\`\`
+
+The script handles framework detection, packaging, and deployment.
+
+## Production Deploys
+
+Only if user explicitly asks:
+
+\`\`\`bash
+vercel deploy [path] --prod -y
+\`\`\`
+```
+
+Notice what this SKILL.md does well:
+
+- The **description** includes verbatim user request examples (`"deploy my app"`, `"push this live"`)
+- The **body** uses imperative form throughout
+- Steps are numbered and concrete — no abstract advice
+- The fallback section references the bundled `scripts/deploy.sh` explicitly
+- No redundant "when to use" section in the body (that belongs in the description)

@@ -1,0 +1,219 @@
+---
+title: "Speech Skill: Text-to-Speech Audio in Codex"
+sidebarTitle: "Speech"
+description: "Generate narrated audio clips and batch voiceovers from text using the OpenAI Audio API with built-in voices, styles, and a bundled CLI."
+---
+
+The Speech skill lets Codex generate spoken audio from text using the OpenAI Audio API. It handles everything from single narration clips to large batch jobs—applying voice style, pacing, and delivery instructions—and writes final audio files to `output/speech/`. All generation runs through the bundled `scripts/text_to_speech.py` CLI for deterministic, reproducible results.
+
+## When to trigger this skill
+
+This skill activates when you ask Codex to:
+
+- Generate **TTS narration** or voiceover for a video, demo, or explainer
+- Create **IVR / phone prompts** or accessibility reads
+- Produce **audio prompts** for an app or game
+- Run **batch speech generation** across many lines of text
+- Experiment with different voices, speeds, or delivery styles
+
+## Defaults
+
+| Setting | Value |
+|---|---|
+| Model | `gpt-4o-mini-tts-2025-12-15` |
+| Voice | `cedar` |
+| Format | `mp3` |
+| Speed | `1.0` |
+| Rate limit | `50` requests/minute |
+
+<Note>
+  `instructions` (style directions) are supported for `gpt-4o-mini-tts` models only. They are silently ignored for `tts-1` and `tts-1-hd`.
+</Note>
+
+## Single vs batch
+
+<Steps>
+  <Step title="Decide the mode">
+    If the user provides **multiple lines or wants many output files** → use **batch** mode (`speak-batch` + JSONL).
+
+    If the user provides **one piece of text** → use **single** mode (`speak`).
+  </Step>
+  <Step title="Collect inputs">
+    Gather: exact input text, desired voice, delivery style, output format, and any constraints.
+  </Step>
+  <Step title="Batch only: write a JSONL file">
+    Write one job per line to `tmp/speech/jobs.jsonl`. Delete the file after the run.
+  </Step>
+  <Step title="Augment instructions">
+    Reformat any user direction into a short labeled spec (affect → tone → pacing → emotion → pronunciation → pauses → emphasis). Do not rewrite the input text.
+  </Step>
+  <Step title="Run the bundled CLI">
+    Use `scripts/text_to_speech.py` with sensible defaults (see examples below). Never create one-off runner scripts.
+  </Step>
+  <Step title="Validate (important clips)">
+    Check intelligibility, pacing, pronunciation, and adherence to constraints. Iterate with a single targeted change at a time.
+  </Step>
+</Steps>
+
+## Installing
+
+```bash
+$skill-installer speech
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## Environment
+
+`OPENAI_API_KEY` must be exported before any live API call.
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+If the key is missing, Codex will prompt you to set it. Never paste your full key into chat.
+
+## The bundled CLI
+
+Set a stable path to the CLI once per session:
+
+```bash
+export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+export TTS_GEN="$CODEX_HOME/skills/speech/scripts/text_to_speech.py"
+```
+
+### Subcommands
+
+| Subcommand | What it does |
+|---|---|
+| `speak` | Generate a single audio file |
+| `speak-batch` | Run many jobs from a JSONL file |
+| `list-voices` | Print all supported voice names |
+
+### `speak` flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--input` | — | Input text (inline) |
+| `--input-file` | — | Path to a text file |
+| `--out` | `speech.mp3` | Output file path |
+| `--voice` | `cedar` | Built-in voice name |
+| `--model` | `gpt-4o-mini-tts-2025-12-15` | TTS model |
+| `--response-format` | `mp3` | Output format (`mp3`, `opus`, `aac`, `flac`, `wav`, `pcm`) |
+| `--speed` | `1.0` | Speech speed (0.25–4.0) |
+| `--instructions` | — | Style directions (inline) |
+| `--instructions-file` | — | Path to an instructions text file |
+| `--attempts` | `3` | Retries on transient errors |
+| `--dry-run` | `false` | Print payload without calling the API |
+| `--force` | `false` | Overwrite existing output files |
+
+### `speak-batch` flags
+
+All `speak` flags apply, plus:
+
+| Flag | Default | Description |
+|---|---|---|
+| `--input` | — | **Required.** Path to the JSONL jobs file |
+| `--out-dir` | `out` | Output directory for all generated files |
+| `--rpm` | `50` | Requests per minute cap (max 50) |
+
+## CLI examples
+
+**List available voices:**
+
+```bash
+python "$TTS_GEN" list-voices
+```
+
+**Dry run (no API call, no network needed):**
+
+```bash
+python "$TTS_GEN" speak --input "Test" --dry-run
+```
+
+**Generate a single clip:**
+
+```bash
+uv run --with openai python "$TTS_GEN" speak \
+  --input "Today is a wonderful day to build something people love!" \
+  --voice cedar \
+  --instructions "Voice Affect: Warm and composed. Tone: upbeat and encouraging." \
+  --response-format mp3 \
+  --out speech.mp3
+```
+
+**Generate with explicit pacing:**
+
+```bash
+python "$TTS_GEN" speak \
+  --input "Welcome to the demo. We'll show how it works." \
+  --instructions "Tone: friendly and confident. Pacing: steady and moderate." \
+  --out demo.mp3
+```
+
+**Batch generation from JSONL:**
+
+```bash
+mkdir -p tmp/speech
+cat > tmp/speech/jobs.jsonl << 'JSONL'
+{"input":"Thank you for calling. Please hold.","voice":"cedar","response_format":"mp3","out":"hold.mp3"}
+{"input":"For sales, press 1. For support, press 2.","voice":"marin","instructions":"Tone: clear and neutral. Pacing: slow.","response_format":"wav"}
+JSONL
+
+python "$TTS_GEN" speak-batch --input tmp/speech/jobs.jsonl --out-dir out --rpm 50
+
+# Clean up the temporary JSONL
+rm -f tmp/speech/jobs.jsonl
+```
+
+<Tip>
+  Per-job overrides inside the JSONL (e.g. `model`, `voice`, `response_format`, `speed`, `instructions`, `out`) take precedence over the base flags. Keep the JSONL under `tmp/` and delete it after the run — do not commit it.
+</Tip>
+
+## Voice style template
+
+Structure delivery instructions as a short labeled spec. Include only the lines you need.
+
+```text
+Voice Affect: <overall character and texture of the voice>
+Tone: <attitude, formality, warmth>
+Pacing: <slow, steady, brisk>
+Emotion: <key emotions to convey>
+Pronunciation: <words to enunciate or emphasize>
+Pauses: <where to add intentional pauses>
+Emphasis: <key words or phrases to stress>
+Delivery: <cadence or rhythm notes>
+```
+
+<Note>
+  Keep instructions to 4–8 short lines. Avoid conflicting guidance, and do not rewrite the input text inside the instructions block.
+</Note>
+
+## Available voices
+
+`alloy`, `ash`, `ballad`, `cedar`, `coral`, `echo`, `fable`, `marin`, `nova`, `onyx`, `sage`, `shimmer`, `verse`
+
+Default is `cedar`. For a brighter tone, prefer `marin`.
+
+## File conventions
+
+| Path | Purpose |
+|---|---|
+| `tmp/speech/` | Intermediate files (e.g. JSONL batches). Delete when done. |
+| `output/speech/` | Final audio artifacts. |
+
+## References included with this skill
+
+| File | Contents |
+|---|---|
+| `references/cli.md` | Full CLI command catalog, flags, and recipes |
+| `references/audio-api.md` | API parameters, voice list, output format notes |
+| `references/voice-directions.md` | Instruction patterns and style examples |
+| `references/narration.md` | Templates and defaults for narration / explainers |
+| `references/voiceover.md` | Templates and defaults for product demo voiceovers |
+| `references/ivr.md` | Templates and defaults for IVR / phone prompts |
+| `references/accessibility.md` | Templates and defaults for accessibility reads |
+
+<Warning>
+  Never modify `scripts/text_to_speech.py`. If something is missing from the CLI, ask the user before taking any action. Always disclose to end users that the voice is AI-generated.
+</Warning>

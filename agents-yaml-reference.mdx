@@ -1,0 +1,183 @@
+---
+title: "agents/openai.yaml: UI Metadata and MCP Dependencies"
+sidebarTitle: "openai.yaml"
+description: "Complete field reference for agents/openai.yaml — UI metadata fields, MCP tool dependency declarations, quoting rules, and generation commands."
+---
+
+The `agents/openai.yaml` file provides UI-facing metadata for how a skill appears inside Codex — its display name, description chip, icon, brand color, and the default prompt that activates it. It also declares external tool dependencies, such as MCP server connections that the skill requires. Unlike `SKILL.md`, this file is read by the Codex harness, not by the agent itself.
+
+## Top-Level Structure
+
+The file has two top-level keys: `interface` and `dependencies`. Both are optional, but at minimum you should provide `interface.display_name`, `interface.short_description`, and `interface.default_prompt`.
+
+```yaml
+interface:
+  display_name: "GH Address Comments"
+  short_description: "Address comments in a GitHub PR review"
+  icon_small: "./assets/small-400px.png"
+  icon_large: "./assets/large-logo.svg"
+  brand_color: "#3B82F6"
+  default_prompt: "Use $gh-address-comments to address all open review threads on my PR."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "github"
+      description: "GitHub MCP server"
+      transport: "streamable_http"
+      url: "https://api.githubcopilot.com/mcp/"
+```
+
+**Quoting rules:**
+- All **string values** must be quoted.
+- All **keys** must be unquoted.
+
+## `interface` Fields
+
+<ParamField path="interface.display_name" type="string">
+  Human-facing title shown in Codex UI skill lists and chips. Generated automatically from the skill name if not provided (e.g., `gh-address-comments` → `"GH Address Comments"`). Use proper casing; well-known acronyms are uppercased automatically (`GH`, `API`, `PDF`, `PR`, `MCP`, `SQL`, `CI`).
+
+  ```yaml
+  display_name: "GH Address Comments"
+  ```
+</ParamField>
+
+<ParamField path="interface.short_description" type="string">
+  Human-facing short blurb for quick scanning in skill lists. Must be **25–64 characters**. Write this as a brief noun phrase describing what the skill does.
+
+  ```yaml
+  short_description: "Address comments in a GitHub PR review"
+  ```
+</ParamField>
+
+<ParamField path="interface.icon_small" type="string">
+  Relative path (from the skill directory) to a small icon asset, typically ~400px square. By convention, place icons in `./assets/`.
+
+  ```yaml
+  icon_small: "./assets/small-400px.png"
+  ```
+</ParamField>
+
+<ParamField path="interface.icon_large" type="string">
+  Relative path to a larger logo asset. Supports PNG and SVG. By convention, place icons in `./assets/`.
+
+  ```yaml
+  icon_large: "./assets/large-logo.svg"
+  ```
+</ParamField>
+
+<ParamField path="interface.brand_color" type="string">
+  Hex color code used for UI accents such as badges and highlights.
+
+  ```yaml
+  brand_color: "#3B82F6"
+  ```
+</ParamField>
+
+<ParamField path="interface.default_prompt" type="string">
+  A short example prompt (typically one sentence) that is inserted when the user invokes the skill from the UI. Must explicitly reference the skill using `$skill-name` syntax.
+
+  ```yaml
+  default_prompt: "Use $gh-address-comments to address all open review threads on my PR."
+  ```
+</ParamField>
+
+## `dependencies.tools[]` Fields
+
+The `dependencies.tools` array declares external tools the skill relies on. Currently only `mcp` type is supported.
+
+<ParamField path="dependencies.tools[].type" type="string" required>
+  Dependency category. Only `"mcp"` is supported.
+
+  ```yaml
+  type: "mcp"
+  ```
+</ParamField>
+
+<ParamField path="dependencies.tools[].value" type="string" required>
+  Identifier of the tool or dependency — typically the MCP server name.
+
+  ```yaml
+  value: "github"
+  ```
+</ParamField>
+
+<ParamField path="dependencies.tools[].description" type="string">
+  Human-readable explanation of what this dependency is.
+
+  ```yaml
+  description: "GitHub MCP server"
+  ```
+</ParamField>
+
+<ParamField path="dependencies.tools[].transport" type="string">
+  Connection type when `type` is `mcp`. Common values: `"streamable_http"`.
+
+  ```yaml
+  transport: "streamable_http"
+  ```
+</ParamField>
+
+<ParamField path="dependencies.tools[].url" type="string">
+  MCP server URL when `type` is `mcp`.
+
+  ```yaml
+  url: "https://api.githubcopilot.com/mcp/"
+  ```
+</ParamField>
+
+## Full Example
+
+This example is adapted directly from the `openai_yaml.md` reference in the skill-creator skill:
+
+```yaml
+interface:
+  display_name: "Optional user-facing name"
+  short_description: "Optional user-facing description"
+  icon_small: "./assets/small-400px.png"
+  icon_large: "./assets/large-logo.svg"
+  brand_color: "#3B82F6"
+  default_prompt: "Optional surrounding prompt to use the skill with"
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "github"
+      description: "GitHub MCP server"
+      transport: "streamable_http"
+      url: "https://api.githubcopilot.com/mcp/"
+```
+
+## Generating and Regenerating `openai.yaml`
+
+The `generate_openai_yaml.py` script creates or regenerates the file from command-line arguments. It reads the skill name from `SKILL.md` frontmatter and accepts interface overrides via `--interface key=value`:
+
+```bash
+# Generate with all three core fields
+scripts/generate_openai_yaml.py path/to/my-skill \
+  --interface display_name="My Skill" \
+  --interface short_description="Does something useful and fast" \
+  --interface default_prompt="Use \$my-skill to complete my task."
+
+# Include optional fields
+scripts/generate_openai_yaml.py path/to/my-skill \
+  --interface display_name="My Skill" \
+  --interface short_description="Does something useful and fast" \
+  --interface brand_color="#FF5733" \
+  --interface default_prompt="Use \$my-skill to complete my task."
+```
+
+The same `--interface` flags work with `init_skill.py` during skill initialization:
+
+```bash
+scripts/init_skill.py my-skill --path skills/public \
+  --interface display_name="My Skill" \
+  --interface short_description="Does something useful and fast" \
+  --interface default_prompt="Use \$my-skill to complete my task."
+```
+
+<Tip>
+  Only include `icon_small`, `icon_large`, and `brand_color` when the user explicitly provides those assets or values. The script generates `display_name` and `short_description` automatically from the skill name if you do not supply them via `--interface`.
+</Tip>
+
+After editing `SKILL.md`, validate that `agents/openai.yaml` still reflects the skill accurately. If the skill's purpose or name changes, regenerate the file by running `generate_openai_yaml.py` again.

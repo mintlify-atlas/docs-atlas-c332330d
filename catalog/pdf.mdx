@@ -1,0 +1,126 @@
+---
+title: "PDF Skill: Read and Write PDFs in Codex"
+sidebarTitle: "PDF"
+description: "Read, create, edit, extract text from, and visually validate PDF files using Python libraries and Poppler rendering tools in Codex."
+---
+
+The PDF skill equips Codex to work with PDF files at every stage: extracting text and structured content, generating new documents programmatically, editing existing files, and visually validating the final output. It uses `reportlab` for reliable PDF generation, `pdfplumber` and `pypdf` for extraction and inspection, and Poppler's `pdftoppm` to render pages as PNGs for quality review. No `OPENAI_API_KEY` is required — this skill is entirely local.
+
+## When to trigger this skill
+
+This skill activates when you ask Codex to:
+
+- **Read or review** PDF content where layout and visual presentation matter
+- **Extract text or data** from an existing PDF (tables, paragraphs, form fields)
+- **Create a new PDF** programmatically with controlled typography and layout
+- **Edit an existing PDF** (add pages, modify content, fill forms)
+- **Rotate, merge, or split** PDF pages
+- **Validate rendering** before delivering a document to a user
+
+## Supported operations
+
+<CardGroup cols={2}>
+  <Card title="Text extraction" icon="magnifying-glass">
+    Use `pdfplumber` or `pypdf` to pull text, tables, and metadata. Note: extraction reflects text order, not visual layout fidelity.
+  </Card>
+  <Card title="PDF creation" icon="file-plus">
+    Use `reportlab` to generate new documents with precise typography, spacing, margins, and section hierarchy.
+  </Card>
+  <Card title="Editing & manipulation" icon="pen-to-square">
+    Use `pypdf` to merge documents, split pages, rotate pages, or copy pages across files.
+  </Card>
+  <Card title="Visual rendering" icon="eye">
+    Use `pdftoppm` (Poppler) to render pages as PNGs and inspect layout, alignment, and legibility before delivery.
+  </Card>
+</CardGroup>
+
+## Workflow
+
+<Steps>
+  <Step title="Prefer visual review first">
+    Render PDF pages to PNGs with `pdftoppm` and inspect them before and after any changes. Do not rely solely on text extraction for layout fidelity.
+  </Step>
+  <Step title="Generate with reportlab">
+    Use `reportlab` when creating new PDFs to get reliable, deterministic formatting output.
+  </Step>
+  <Step title="Extract with pdfplumber or pypdf">
+    Use `pdfplumber` for text and table extraction. Use `pypdf` for structural operations (merge, split, rotate).
+  </Step>
+  <Step title="Re-render and verify">
+    After each meaningful update, re-render pages and check alignment, spacing, and legibility.
+  </Step>
+  <Step title="Final quality check">
+    Do not deliver until the latest PNG inspection shows zero visual or formatting defects.
+  </Step>
+</Steps>
+
+## Installing
+
+```bash
+$skill-installer pdf
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## Dependencies
+
+Install Python libraries:
+
+```bash
+# Preferred (uv)
+uv pip install reportlab pdfplumber pypdf
+
+# Fallback
+python3 -m pip install reportlab pdfplumber pypdf
+```
+
+Install Poppler (for `pdftoppm` rendering):
+
+```bash
+# macOS (Homebrew)
+brew install poppler
+
+# Ubuntu / Debian
+sudo apt-get install -y poppler-utils
+```
+
+<Note>
+  No `OPENAI_API_KEY` is required for this skill. All operations run locally using Python libraries and system tools.
+</Note>
+
+## Rendering command
+
+```bash
+pdftoppm -png $INPUT_PDF $OUTPUT_PREFIX
+```
+
+This produces one PNG per page (`$OUTPUT_PREFIX-1.png`, `$OUTPUT_PREFIX-2.png`, …) for visual inspection.
+
+## File conventions
+
+| Path | Purpose |
+|---|---|
+| `tmp/pdfs/` | Intermediate files during processing. Delete when done. |
+| `output/pdf/` | Final PDF artifacts ready for delivery. |
+
+Keep filenames stable and descriptive throughout the workflow.
+
+## Quality standards
+
+Codex applies these quality checks before delivering any PDF:
+
+- **Typography**: consistent fonts, sizes, and weights throughout
+- **Spacing and margins**: uniform padding and section separation
+- **Tables and charts**: sharp, aligned, clearly labeled
+- **Text rendering**: no clipped text, overlapping elements, black squares, or unreadable glyphs
+- **Character encoding**: ASCII hyphens only — avoid U+2011 (non-breaking hyphen) and other Unicode dashes
+- **References and citations**: human-readable — no tool tokens or placeholder strings
+- **Headers, footers, and page numbers**: polished and consistent across all pages
+
+<Warning>
+  Do not deliver a PDF until the latest `pdftoppm` PNG inspection confirms zero visual defects. If Poppler is unavailable in the Codex environment, tell the user which tool is missing and ask them to review the output locally.
+</Warning>
+
+## Default prompt
+
+> Create, edit, or review this PDF and summarize the key output or changes.

@@ -1,0 +1,176 @@
+---
+title: "ASP.NET Core Skill: Build .NET Web Apps in Codex"
+sidebarTitle: "ASP.NET Core"
+description: "Build, review, and architect ASP.NET Core web apps—Blazor, Razor Pages, MVC, APIs, SignalR, gRPC, and more—using current .NET guidance."
+---
+
+The ASP.NET Core skill gives Codex a structured, reference-backed approach to building and maintaining .NET web applications. Instead of relying on stale patterns or guessing at framework conventions, Codex confirms the target SDK and app model first, then loads only the focused reference files that match the task—whether that's wiring up a new Blazor Web App, adding a SignalR hub to an existing MVC site, securing endpoints with ASP.NET Core Identity, or migrating from an older `Startup`-based host. Every generated solution stays close to official `dotnet new` templates and the conventions already present in the codebase.
+
+<Note>
+  This skill targets **Windows only** for initial scaffolding, though the
+  generated ASP.NET Core apps run cross-platform.
+</Note>
+
+## Installing
+
+```bash
+$skill-installer aspnet-core
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## What This Skill Enables
+
+<CardGroup cols={2}>
+  <Card title="App Model Selection" icon="map">
+    Choose the right ASP.NET Core model — Blazor, Razor Pages, MVC, Minimal
+    APIs, controller-based Web API — and scaffold from the correct template.
+  </Card>
+  <Card title="Host & Pipeline" icon="server">
+    Structure `Program.cs`, configure services, compose middleware, set up
+    routing, logging, and static assets correctly.
+  </Card>
+  <Card title="UI with Blazor, MVC & Razor Pages" icon="browser">
+    Build server-rendered and interactive UI with the right render mode,
+    component, handler, and view conventions.
+  </Card>
+  <Card title="APIs: Minimal & Controller-based" icon="code">
+    Build HTTP APIs with validation, response patterns, OpenAPI, and
+    content negotiation.
+  </Card>
+  <Card title="Data, State & Services" icon="database">
+    Use EF Core, `DbContext`, `IHttpClientFactory`, options patterns, session,
+    and app state correctly.
+  </Card>
+  <Card title="Security & Identity" icon="shield">
+    Apply authentication, authorization, ASP.NET Core Identity, secrets
+    management, CORS, CSRF, and HTTPS guidance.
+  </Card>
+  <Card title="Real-time, gRPC & Background Work" icon="bolt">
+    Add SignalR hubs, gRPC services, and `IHostedService` / Worker Service
+    background tasks.
+  </Card>
+  <Card title="Testing & Operations" icon="flask">
+    Write integration tests, configure health checks, add rate limiting, output
+    caching, and prepare for deployment.
+  </Card>
+</CardGroup>
+
+## Trigger Conditions
+
+Codex activates this skill when the task involves:
+
+- Building or scaffolding a new Blazor Web App, Razor Pages site, MVC app, or Web API
+- Adding Minimal API endpoints or controller-based API routes
+- Configuring the request pipeline, DI container, or middleware in `Program.cs`
+- Implementing SignalR real-time features or gRPC services
+- Applying authentication, authorization, or Identity
+- Using EF Core, sessions, caching, or background services
+- Writing integration or end-to-end tests for an ASP.NET Core app
+- Upgrading between .NET major versions or migrating from legacy `Startup` patterns
+
+## Stack Selection
+
+For new apps or major refactors, Codex opens `references/stack-selection.md` first to confirm the right application model:
+
+| Model | Best For |
+|-------|---------|
+| **Blazor Web App** | Full-stack .NET UI with SSR and optional interactivity |
+| **Razor Pages** | Page-focused CRUD, forms, dashboards, line-of-business apps |
+| **MVC** | Large server-rendered apps with controller/view separation and filters |
+| **Minimal APIs** | Focused HTTP APIs, lightweight backends, small surface areas |
+| **Controller-based Web API** | APIs needing `[ApiController]`, content negotiation, and mature controller conventions |
+| **SignalR** | Server push, live updates, chat, and collaborative UI (added to an existing host) |
+| **gRPC** | Service-to-service or streaming RPC over HTTP/2 |
+
+<Tip>
+  ASP.NET Core supports mixing models in a single host — for example, Razor
+  Pages for server UI plus Minimal APIs for AJAX endpoints. Mix models only when
+  it genuinely simplifies the public surface.
+</Tip>
+
+### Default Version
+
+Codex targets the **latest stable ASP.NET Core and .NET** for new work. As of early 2026 that means `.NET 10 / ASP.NET Core 10`. Treat ASP.NET Core 11 as preview unless the user explicitly requests preview features. If the repository already targets `net8.0` or `net9.0`, stay within that target unless the task is an explicit upgrade.
+
+### Template Short Names
+
+```bash
+dotnet new blazor          # Blazor Web App
+dotnet new webapp          # Razor Pages
+dotnet new mvc             # MVC
+dotnet new webapi          # Web API (Minimal or controller-based)
+dotnet new webapiaot       # Web API with AOT
+dotnet new grpc            # gRPC service
+dotnet new web             # Empty web host
+dotnet new razorclasslib   # Razor Class Library
+```
+
+Verify template names with `dotnet new list` if your environment differs.
+
+## Reference Categories
+
+Codex loads the smallest set of references that fit the task. The full reference library covers:
+
+<Steps>
+  <Step title="Stack Selection">
+    Choose the right application model and template for a new app or major
+    refactor — `references/stack-selection.md`
+  </Step>
+  <Step title="Program & Pipeline">
+    Structure `Program.cs`, DI registration, middleware composition, routing,
+    configuration, logging, and static assets —
+    `references/program-and-pipeline.md`
+  </Step>
+  <Step title="UI: Blazor">
+    Blazor Web Apps, render modes, components, forms, and JS interop —
+    `references/ui-blazor.md`
+  </Step>
+  <Step title="UI: Razor Pages">
+    Page-focused server-rendered apps with handlers and model binding —
+    `references/ui-razor-pages.md`
+  </Step>
+  <Step title="UI: MVC">
+    Controller/view applications with clear separation of concerns —
+    `references/ui-mvc.md`
+  </Step>
+  <Step title="APIs: Minimal & Controllers">
+    HTTP APIs, validation, and response patterns —
+    `references/apis-minimal-and-controllers.md`
+  </Step>
+  <Step title="Data, State & Services">
+    EF Core, `DbContext`, options, `IHttpClientFactory`, session, and app state —
+    `references/data-state-and-services.md`
+  </Step>
+  <Step title="Security & Identity">
+    Authentication, authorization, Identity, secrets, CORS, CSRF, and HTTPS —
+    `references/security-and-identity.md`
+  </Step>
+  <Step title="Real-time, gRPC & Background Work">
+    SignalR, gRPC, and hosted services —
+    `references/realtime-grpc-and-background-work.md`
+  </Step>
+  <Step title="Testing, Performance & Operations">
+    Integration tests, caching, compression, health checks, rate limiting,
+    and deployment — `references/testing-performance-and-operations.md`
+  </Step>
+  <Step title="Versioning & Upgrades">
+    Target framework changes, breaking changes, obsolete APIs, and migrations —
+    `references/versioning-and-upgrades.md`
+  </Step>
+</Steps>
+
+## Default Operating Assumptions
+
+- Use `WebApplicationBuilder` and `WebApplication`. Avoid the legacy `Startup` / `WebHost` pattern unless the codebase already uses it or the task is a migration.
+- Prefer built-in DI, options, logging, `ProblemDetails`, OpenAPI, health checks, rate limiting, output caching, and Identity before adding third-party infrastructure.
+- Keep feature slices cohesive: page, component, endpoint, controller, validation, service, data access, and tests should be easy to trace together.
+- Respect the existing app model. Do not rewrite Razor Pages to MVC or controller endpoints to Minimal APIs without a clear reason.
+- When generating new code, start from the correct `dotnet new` template and keep the generated structure recognisable.
+- When a task mentions "latest", verify the feature on Microsoft Learn or the ASP.NET Core docs repo before relying on memory.
+
+## Default Prompt
+
+```text
+Create a new $aspnet-core website for me.
+```

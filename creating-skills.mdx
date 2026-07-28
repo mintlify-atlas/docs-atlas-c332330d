@@ -1,0 +1,185 @@
+---
+title: "Create a Custom Skill for Codex: Step-by-Step Guide"
+sidebarTitle: "Creating Skills"
+description: "Step-by-step guide to creating a new Codex skill using the skill-creator system skill, init_skill.py scaffolding, and quick_validate.py."
+---
+
+Creating a skill is the process of packaging specialized knowledge, workflows, and tools into a reusable directory that Codex can discover and apply automatically. The `skill-creator` system skill guides this process end-to-end. The six-step workflow below — from understanding what the skill needs to iterating based on real usage — ensures you build something lean, reliable, and effective.
+
+<Tip>
+  Codex is already very smart. Before writing anything, ask: "Does Codex genuinely need this information, or does it already know it?" The best skills provide procedural knowledge, domain-specific schemas, or reusable resources that a general-purpose model cannot possess — not verbose explanations of things Codex handles well on its own.
+</Tip>
+
+## The Six-Step Process
+
+<Steps>
+  <Step title="Understand with Concrete Examples">
+    Before writing a single line, build a clear picture of how the skill will actually be used. Good skills are designed around real workflows, not abstract ideas.
+
+    Ask yourself — or your users — targeted questions:
+
+    - "What functionality should this skill support?"
+    - "Can you give examples of how this skill would be used?"
+    - "What would a user say that should trigger this skill?"
+    - "What does Codex struggle with today that this skill would fix?"
+
+    For an image-editing skill, you might ask: *"Should it support rotating, resizing, red-eye removal, or all three? Can you give me three example requests?"*
+
+    Conclude this step when you have a clear set of concrete example requests and outcomes. This understanding will drive every decision that follows.
+  </Step>
+
+  <Step title="Plan Reusable Contents">
+    Turn each concrete example into a list of reusable resources. For each example, ask:
+
+    1. How would Codex execute this from scratch?
+    2. What would make it faster, more reliable, or more consistent the tenth time?
+
+    **Example — `pdf-editor` skill:**
+    - Example request: "Rotate pages 2-4 of this PDF 90 degrees"
+    - From scratch: write Python to manipulate the PDF — same code every time
+    - Resource: `scripts/rotate_pdf.py` → bundles the logic so it never needs to be rewritten
+
+    **Example — `big-query` skill:**
+    - Example request: "How many users have logged in today?"
+    - From scratch: discover the schema, find the right table — every time
+    - Resource: `references/schema.md` → documents table schemas and relationships once
+
+    **Example — `frontend-webapp-builder` skill:**
+    - Example request: "Build me a todo app in React"
+    - From scratch: write the same HTML/React boilerplate every time
+    - Resource: `assets/hello-world/` → stores the boilerplate directory as a template
+
+    By the end of this step, you should have a list of: which `scripts/` to write, which `references/` to create (possibly asking the user to provide docs), and which `assets/` to bundle.
+  </Step>
+
+  <Step title="Initialize the Skill">
+    Run `init_skill.py` to scaffold the skill directory. The script generates a SKILL.md template with proper frontmatter and TODO placeholders, creates `agents/openai.yaml`, and optionally creates resource directories.
+
+    **Basic usage:**
+
+    ```bash
+    scripts/init_skill.py <skill-name> --path <output-directory>
+    ```
+
+    **With resource directories:**
+
+    ```bash
+    scripts/init_skill.py my-skill --path skills/public --resources scripts,references
+    ```
+
+    **With resource directories and example placeholder files:**
+
+    ```bash
+    scripts/init_skill.py my-skill --path skills/public --resources scripts,references,assets --examples
+    ```
+
+    **With UI metadata for `agents/openai.yaml`:**
+
+    ```bash
+    scripts/init_skill.py my-skill --path skills/public \
+      --interface display_name="My Skill" \
+      --interface short_description="Does something specific and useful" \
+      --interface default_prompt="Use \$my-skill to complete my workflow."
+    ```
+
+    **What the script generates:**
+
+    ```
+    skills/public/my-skill/
+    ├── SKILL.md              ← template with TODO placeholders
+    ├── agents/
+    │   └── openai.yaml       ← generated from --interface flags
+    ├── scripts/
+    │   └── example.py        ← placeholder (if --examples)
+    ├── references/
+    │   └── api_reference.md  ← placeholder (if --examples)
+    └── assets/
+        └── example_asset.txt ← placeholder (if --examples)
+    ```
+
+    If you used `--examples`, replace or delete the placeholder files. Only keep the resource directories that the skill actually needs.
+
+    <Note>
+      Only run `init_skill.py` for new skills. If the skill directory already exists, skip this step and proceed to editing.
+    </Note>
+  </Step>
+
+  <Step title="Edit the Skill">
+    Start with the bundled resources, then write SKILL.md. Remember: you are writing for another Codex instance, not a human. Include information that would be beneficial and non-obvious to an AI agent executing these tasks.
+
+    **Implement bundled resources first:**
+
+    - Write and test all `scripts/` files. Run each script to verify there are no bugs and the output is correct. For large sets of similar scripts, test a representative sample.
+    - Create `references/` files. For documentation the user needs to provide (brand assets, internal schemas), request the content before proceeding.
+    - Add `assets/` files. These are files that will be used in the output — templates, boilerplate, icons.
+
+    **Then write SKILL.md:**
+
+    Write the frontmatter `description` first — this is the primary trigger mechanism. Include specific user request patterns, file types, and contexts. All "when to use" information belongs in the description, not in the body.
+
+    ```yaml
+    ---
+    name: my-skill
+    description: Comprehensive description of what this skill does and when to use it.
+      Include specific trigger phrases like "do X", "help with Y", and "create Z".
+      Mention the file types, APIs, or domains this skill covers.
+    ---
+    ```
+
+    Then write the body: step-by-step instructions using imperative form, concrete commands with code blocks, and explicit references to each bundled resource file — stating clearly when Codex should load or execute each one.
+  </Step>
+
+  <Step title="Validate the Skill">
+    Run the validation script to catch structural issues before the skill is used:
+
+    ```bash
+    scripts/quick_validate.py <path/to/skill-folder>
+    ```
+
+    **What the script checks:**
+
+    - `SKILL.md` exists and starts with valid YAML frontmatter (`---`)
+    - Frontmatter is a valid YAML dictionary
+    - `name` and `description` fields are present
+    - No unexpected keys in frontmatter (allowed: `name`, `description`, `license`, `allowed-tools`, `metadata`)
+    - `name` matches the naming rules: lowercase letters, digits, hyphens only; no leading/trailing hyphens; no consecutive hyphens; max 64 characters
+    - `description` does not contain angle brackets and is under 1024 characters
+
+    **Example output:**
+
+    ```bash
+    $ scripts/quick_validate.py skills/public/my-skill
+    Skill is valid!
+
+    $ scripts/quick_validate.py skills/public/bad-skill
+    Name 'Bad_Skill' should be hyphen-case (lowercase letters, digits, and hyphens only)
+    ```
+
+    Fix any reported issues and re-run until validation passes.
+  </Step>
+
+  <Step title="Iterate Based on Real Usage">
+    After the skill is installed and in use, it will surface friction points that weren't visible during authoring. Common improvements:
+
+    - Tighten the `description` if the skill triggers at the wrong time (or not at all)
+    - Add missing reference files when Codex has to rediscover domain knowledge each run
+    - Simplify SKILL.md body sections that aren't being used
+    - Add scripts for steps that are repeatedly rewritten from scratch
+
+    The iteration cycle is: **use the skill on real tasks → notice struggles → identify what to change → implement and test again.**
+  </Step>
+</Steps>
+
+## Skill Naming Quick Reference
+
+| Rule | Example |
+|---|---|
+| Lowercase, digits, hyphens only | `gh-address-comments` ✅ |
+| Verb-led phrase | `rotate-pdf`, `deploy-app` ✅ |
+| Namespace by tool | `gh-address-comments`, `vercel-deploy` ✅ |
+| Max 64 characters | Any name ≤ 64 chars ✅ |
+| No uppercase, spaces, underscores | `GH_Address`, `vercel deploy` ❌ |
+| No leading/trailing hyphens | `-my-skill-` ❌ |
+| No consecutive hyphens | `my--skill` ❌ |
+
+The `init_skill.py` script normalizes names automatically — spaces become hyphens, uppercase becomes lowercase — and prints a note if normalization changed your input.

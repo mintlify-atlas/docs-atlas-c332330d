@@ -1,0 +1,212 @@
+---
+title: "Bundled Resources: Scripts, References, and Assets"
+sidebarTitle: "Bundled Resources"
+description: "How to use scripts/, references/, and assets/ directories effectively — when to include each type, organization patterns, and what to leave out."
+---
+
+Beyond `SKILL.md`, a skill can bundle three types of resources: executable scripts, reference documentation, and output assets. Each type serves a distinct purpose in how Codex operates — some are executed without reading, some are read into context on demand, and some are copied directly into outputs. Understanding which type to use, and when, is the key to building efficient, effective skills.
+
+## The Three Resource Types
+
+<CardGroup cols={3}>
+  <Card title="scripts/" icon="code">
+    Executable code run directly by Codex. Token-efficient, deterministic, not loaded into context unless Codex needs to patch them.
+  </Card>
+  <Card title="references/" icon="book">
+    Documentation loaded into context on demand. Keeps SKILL.md lean while making domain knowledge available when needed.
+  </Card>
+  <Card title="assets/" icon="file">
+    Files used in the output — templates, boilerplate, images. Never loaded into context; copied or referenced in the final result.
+  </Card>
+</CardGroup>
+
+## `scripts/`: Executable Code
+
+The `scripts/` directory holds executable Python, Bash, or other scripts that perform specific operations on behalf of Codex.
+
+**When to include scripts:**
+
+- The same code would otherwise be rewritten from scratch on every run
+- Deterministic reliability is more important than flexibility (e.g., PDF manipulation, file format conversion)
+- An operation is complex enough that ad-hoc code generation produces inconsistent results
+- The task involves a specific sequence of steps that must be followed exactly
+
+**Benefits:**
+
+- **Token-efficient:** Scripts can be executed without loading their source into the context window
+- **Deterministic:** A tested script produces consistent results across runs
+- **Patchable:** Codex can still read and modify scripts when environment-specific adjustments are needed
+
+**Example:**
+
+```
+pdf-editor/
+└── scripts/
+    ├── rotate_pdf.py          ← rotates specific pages
+    ├── fill_fillable_fields.py ← fills PDF form fields
+    └── extract_form_field_info.py ← inspects form fields
+```
+
+When the user asks "Rotate pages 2-4 of this PDF 90 degrees," Codex executes `scripts/rotate_pdf.py` directly rather than regenerating that logic from scratch.
+
+**Testing requirement:** Every script in a skill must be tested by actually running it before the skill is published. If there are many similar scripts, test a representative sample. Untested scripts that fail at runtime undermine the skill's reliability.
+
+## `references/`: On-Demand Documentation
+
+The `references/` directory holds documentation that Codex reads into context when it determines the information is needed for a specific task.
+
+**When to include reference files:**
+
+- Database schemas that Codex would otherwise have to re-discover each run
+- API documentation for tools that aren't well-represented in training data
+- Domain-specific policies, business logic, or company standards
+- Detailed workflow guides too long for SKILL.md
+- Information that is only relevant for specific sub-tasks
+
+**Examples:**
+
+```
+big-query-skill/
+└── references/
+    ├── schema.md        ← table schemas and relationships
+    └── api_docs.md      ← BigQuery API reference
+
+legal-docs-skill/
+└── references/
+    ├── mnda.md          ← mutual NDA template and clauses
+    └── policies.md      ← company legal policies
+
+finance-skill/
+└── references/
+    └── finance.md       ← revenue metrics, billing schemas
+```
+
+**Best practices:**
+
+1. **Table of contents for long files:** For any reference file longer than 100 lines, add a table of contents at the top. This lets Codex scan the full scope of a file before deciding which section to focus on.
+
+2. **Grep hints for very large files:** For files over ~10,000 words, include search patterns in SKILL.md so Codex can locate relevant sections without reading the entire file:
+
+   ```markdown
+   For billing schema details, read `references/finance.md`.
+   Search for "billing_events" or "subscription_state" to find relevant tables.
+   ```
+
+3. **Avoid duplication:** Information should live in either SKILL.md or a reference file — never both. If a schema is in `references/schema.md`, don't also summarize it in SKILL.md. Add a pointer instead.
+
+## `assets/`: Output Files
+
+The `assets/` directory holds files that become part of the output Codex produces — not documentation that gets read, but actual files that get copied, filled in, or referenced in the final deliverable.
+
+**When to include assets:**
+
+- The skill generates output based on a consistent template (slides, reports, documents)
+- The skill scaffolds a new project and needs boilerplate code to copy
+- The skill requires images, icons, or fonts as part of its output
+
+**Examples:**
+
+```
+brand-guidelines-skill/
+└── assets/
+    ├── logo.png              ← brand logo
+    └── slides_template.pptx  ← PowerPoint template to copy
+
+frontend-webapp-builder/
+└── assets/
+    └── hello-world/          ← React boilerplate project directory
+        ├── package.json
+        ├── src/
+        └── public/
+
+typography-skill/
+└── assets/
+    ├── custom-font.ttf
+    └── font-family.woff2
+```
+
+Assets are never loaded into the context window. Codex knows they exist (from SKILL.md), but accesses them only by executing commands that copy or reference them — keeping context overhead to zero regardless of asset size.
+
+## Organization Patterns
+
+When a skill covers multiple domains, frameworks, or use cases, organize reference files to avoid loading irrelevant content.
+
+**By domain:**
+
+```
+bigquery-skill/
+└── references/
+    ├── finance.md    ← revenue, billing metrics
+    ├── sales.md      ← opportunities, pipeline
+    ├── product.md    ← API usage, feature metrics
+    └── marketing.md  ← campaigns, attribution
+```
+
+When the user asks about sales data, Codex reads only `sales.md`.
+
+**By cloud provider or framework:**
+
+```
+cloud-deploy-skill/
+└── references/
+    ├── aws.md    ← AWS deployment patterns
+    ├── gcp.md    ← GCP deployment patterns
+    └── azure.md  ← Azure deployment patterns
+```
+
+When the user chooses AWS, Codex reads only `aws.md`.
+
+**By feature:**
+
+```
+docx-skill/
+└── references/
+    ├── forms.md       ← form filling and fields
+    ├── redlining.md   ← tracked changes
+    └── ooxml.md       ← raw XML manipulation
+```
+
+## Referencing Resources from SKILL.md
+
+Every bundled resource must be explicitly referenced in SKILL.md with a clear description of when to use it. Without a reference, Codex may not know the file exists or when to load it.
+
+**Good reference in SKILL.md:**
+
+```markdown
+## Working with Schemas
+
+For all table schemas and field definitions, read `references/schema.md` before
+writing any queries. Search for the table name to find relevant columns.
+
+## Rotating PDFs
+
+To rotate pages, run `scripts/rotate_pdf.py`:
+
+\`\`\`bash
+python scripts/rotate_pdf.py --input file.pdf --pages 2-4 --angle 90
+\`\`\`
+```
+
+**Poor reference in SKILL.md:**
+
+```markdown
+There are some reference files available.
+```
+
+The second example doesn't tell Codex when to read the files or what they contain.
+
+## What NOT to Include
+
+<Warning>
+  Do not add auxiliary documentation files to a skill's resource directories. The following files have no place in a skill:
+
+  - `README.md` or `README.txt`
+  - `CHANGELOG.md` or `HISTORY.md`
+  - `INSTALLATION_GUIDE.md`
+  - `CONTRIBUTING.md`
+  - `QUICK_REFERENCE.md`
+  - Test fixtures or development-only files
+  - Configuration files only relevant during skill development
+
+  These files add noise, consume context window space, and confuse Codex about what is actionable. A skill directory should contain only what an AI agent needs to perform the task.
+</Warning>

@@ -1,47 +1,103 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Quickstart: Install and Use Your First Codex Skill"
+sidebarTitle: "Quickstart"
+description: "Install your first Codex skill using $skill-installer and put it to work — complete with a concrete example using gh-address-comments."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+Agent Skills extend Codex with specialized capabilities that activate automatically when relevant. This guide walks you through discovering what skills are available, installing one, and using it in a real workflow — all from inside Codex itself, using the built-in `$skill-installer` system skill.
 
 ## Prerequisites
 
-Before you begin, you must have:
+Before you begin:
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+- You need a Codex account with an active session.
+- **System skills** (`skill-installer`, `skill-creator`) are pre-installed in every Codex environment. You do not need to install them.
+- Curated and experimental skills require an explicit install step, followed by a Codex restart.
 
-## Get started
+## Installing and Using a Skill
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Open Codex and list available skills">
+    Start a new Codex session and type the following to invoke the skill-installer:
 
-    ```bash
-    npm install your-package
+    ```
+    $skill-installer
+    ```
+
+    Codex will call the `list-skills.py` helper script and display the available curated skills from `skills/.curated`, annotating any that are already installed:
+
+    ```
+    Skills from openai/skills:
+    1. gh-address-comments
+    2. vercel-deploy (already installed)
+    3. ...
+    Which ones would you like installed?
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
+  <Step title="Install a skill by name">
+    Install the `gh-address-comments` skill by referencing it directly:
+
     ```
+    $skill-installer gh-address-comments
+    ```
+
+    The installer downloads the skill from the curated catalog and places it at `$CODEX_HOME/skills/gh-address-comments` (which defaults to `~/.codex/skills/gh-address-comments`).
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
 
-    ```bash
-    your-cli start
+  <Step title="Restart Codex">
+    After installing any new skill, restart Codex so it picks up the new skill's metadata.
+
+    <Note>
+      Skills are discovered at startup. A restart is required before a newly installed skill becomes active. Codex will confirm the skill is available on your next turn.
+    </Note>
+  </Step>
+
+  <Step title="Use the skill">
+    In your next session, navigate to a repository with an open pull request and ask Codex to address the PR comments:
+
     ```
+    Address the review comments on my current PR
+    ```
+
+    Codex matches the request to `gh-address-comments`, loads the skill, fetches the PR comments using the bundled `scripts/fetch_comments.py`, and asks you which comment threads to address before applying changes.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Installing Experimental Skills
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+Experimental skills live in `skills/.experimental` and are not included in the default curated listing. You can install them in two ways.
+
+**By folder name:**
+
+```
+$skill-installer install the create-plan skill from the .experimental folder
+```
+
+**By full GitHub URL:**
+
+```
+$skill-installer install https://github.com/openai/skills/tree/main/skills/.experimental/create-plan
+```
+
+Both approaches call `install-skill-from-github.py` under the hood and install the skill to `$CODEX_HOME/skills/<skill-name>`. Restart Codex after installing.
+
+## What Happens Under the Hood
+
+When you run `$skill-installer`, Codex activates the `skill-installer` system skill, which uses two helper scripts:
+
+- **`list-skills.py`** — Queries the GitHub API for the contents of `skills/.curated` (or another path you specify) and cross-references with your locally installed skills.
+- **`install-skill-from-github.py`** — Downloads the skill directory from GitHub (using direct download for public repos, falling back to git sparse checkout for private repos or auth failures) and copies it into `$CODEX_HOME/skills/`.
+
+Private GitHub repositories are supported via `GITHUB_TOKEN` or `GH_TOKEN` environment variables.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="All Installation Methods" icon="download" href="/installing-skills">
+    Learn every install option: by name, by folder, by URL, with private repo support and CLI flags.
+  </Card>
+  <Card title="Create a Custom Skill" icon="plus" href="/creating-skills">
+    Build your own skill for team-specific workflows using the skill-creator and init_skill.py.
+  </Card>
+</CardGroup>

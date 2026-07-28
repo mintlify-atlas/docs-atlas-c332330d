@@ -1,0 +1,218 @@
+---
+title: "Image Generation Skill: AI Images from Codex"
+sidebarTitle: "Image Gen"
+description: "Generate or edit raster images directly from Codex — photos, sprites, UI mockups, product shots, and transparent cutouts via the OpenAI Image API."
+---
+
+The Image Generation skill gives Codex the ability to create and edit bitmap images on demand. Whether you need a landing-page hero, a game sprite, a product mockup, or an inpainted background replacement, this skill handles it without leaving your development workflow. By default it uses the built-in `image_gen` tool and requires no API key from you. A fallback CLI path (`scripts/image_gen.py`) is also available for cases where you need precise control over output paths, quality levels, masks, or batch jobs — but only when you explicitly request it.
+
+<Note>
+  The Image Generation skill is a **system skill** — it comes pre-installed in every Codex environment and cannot be removed by users.
+</Note>
+
+## What this skill does
+
+<CardGroup cols={2}>
+  <Card title="Generate new images" icon="image">
+    Create photos, illustrations, concept art, UI mockups, infographics, and product shots from a text prompt.
+  </Card>
+  <Card title="Edit existing images" icon="pen-to-square">
+    Inpaint, replace backgrounds, remove objects, apply style transfers, and composite multiple images together.
+  </Card>
+  <Card title="Batch generation" icon="layer-group">
+    Produce many asset variants in one run using the `generate-batch` CLI subcommand with a JSONL prompt file.
+  </Card>
+  <Card title="Save to workspace" icon="folder-open">
+    Automatically copies the selected final image into your project directory and reports the saved path.
+  </Card>
+</CardGroup>
+
+## When it triggers
+
+The skill activates when the task calls for a **raster bitmap asset** rather than code-native or vector output. Use it when you want to:
+
+- Generate a brand-new image (concept art, product shot, website hero, cover)
+- Use reference images for style, composition, or mood guidance
+- Edit an existing image (inpainting, lighting changes, background replacement, transparent cutout)
+- Produce many asset variants for a single task
+
+**Do not use** when the task is better served by editing existing SVG/vector files, extending an established icon system, or building visuals directly in HTML/CSS/canvas.
+
+## Two operating modes
+
+<Steps>
+  <Step title="Built-in tool mode (default)">
+    Codex uses the built-in `image_gen` tool automatically. No `OPENAI_API_KEY` required. Generated images are saved under `$CODEX_HOME/generated_images/` by default; project-bound assets are then moved or copied into the workspace.
+  </Step>
+  <Step title="Fallback CLI mode (explicit only)">
+    Use `scripts/image_gen.py` only when you explicitly ask for it. Requires `OPENAI_API_KEY` and network access. Gives you precise control over quality, input fidelity, masks, output format, and batch jobs.
+  </Step>
+</Steps>
+
+<Warning>
+  Codex will never switch to the CLI fallback automatically. If the built-in tool fails, Codex will tell you the CLI fallback exists and wait for your explicit confirmation before using it.
+</Warning>
+
+## Save-path rules
+
+| Scenario | Where the image lands |
+|---|---|
+| Preview or brainstorm only | Rendered inline; file stays at `$CODEX_HOME/generated_images/…` |
+| Image is meant for the project | Moved/copied into the workspace; path is reported |
+| User names a destination | File is placed at the named path |
+
+Never overwrite an existing asset without explicit permission — instead Codex creates a versioned sibling like `hero-v2.png`.
+
+## Prompting guidance
+
+Structure every prompt as: **scene/backdrop → subject → key details → constraints → output intent**.
+
+Use the labeled spec format for best results:
+
+```text
+Use case: product-mockup
+Asset type: landing page hero
+Primary request: a minimal ceramic coffee mug on a white background
+Style/medium: clean product photography
+Composition/framing: wide shot with usable negative space for page copy
+Lighting/mood: soft diffused studio lighting
+Constraints: no logos, no text, no watermark
+```
+
+<Tip>
+  For edits, always state what must stay unchanged: `change only the background; keep the product and its shadow intact`. Repeat invariants on every iteration to prevent drift.
+</Tip>
+
+### Specificity policy
+
+- **Specific prompt** → normalize it into a clean spec without adding creative details.
+- **Generic prompt** → add tasteful augmentation only when it will materially improve the result (composition hints, polish level, framing). Never add extra characters, brand names, or story elements that weren't implied.
+
+### Text in images
+
+- Put exact text in quotes and specify font style, size, color, and placement.
+- Spell uncommon words letter-by-letter when accuracy is critical.
+
+## Use-case taxonomy
+
+| Slug | When to use |
+|---|---|
+| `photorealistic-natural` | Candid/editorial lifestyle scenes with natural lighting |
+| `product-mockup` | Product/packaging shots, catalog imagery, merch concepts |
+| `ui-mockup` | App/web interface mockups; specify desired fidelity |
+| `infographic-diagram` | Structured diagrams with layout and text |
+| `logo-brand` | Logo/mark exploration, vector-friendly output |
+| `illustration-story` | Comics, children's book art, narrative scenes |
+| `stylized-concept` | Style-driven concept art, 3D/stylized renders |
+| `historical-scene` | Period-accurate scenes |
+| `text-localization` | Replace in-image text while preserving layout |
+| `identity-preserve` | Try-on / person-in-scene; lock face and pose |
+| `precise-object-edit` | Remove or replace a specific element |
+| `lighting-weather` | Time-of-day or atmosphere changes only |
+| `background-extraction` | Transparent background / clean cutout |
+| `style-transfer` | Apply reference style to a different subject |
+| `compositing` | Multi-image insert/merge |
+| `sketch-to-render` | Convert line art to photoreal render |
+
+## Fallback CLI usage
+
+These commands apply **only** in explicit CLI mode.
+
+### Setup
+
+```bash
+export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+export IMAGE_GEN="$CODEX_HOME/skills/.system/imagegen/scripts/image_gen.py"
+
+# Install the required package (uv-managed environments)
+uv pip install openai
+
+# Optional: install Pillow for downscaling
+uv pip install pillow
+```
+
+### Supported API parameters (CLI fallback only)
+
+| Parameter | Values | Notes |
+|---|---|---|
+| `--size` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` | Default: `1024x1024` |
+| `--quality` | `low`, `medium`, `high`, `auto` | Default: `auto` |
+| `--background` | `transparent`, `opaque`, `auto` | Controls output transparency |
+| `--output-format` | `png`, `jpeg`, `webp` | Default: `png` |
+| `--output-compression` | `0`–`100` | JPEG/WebP only |
+| `--input-fidelity` | `low`, `high` | Edit subcommand only |
+| `--mask` | path to PNG mask | Edit subcommand only |
+| `--n` | `1`–`10` | Number of variants per prompt |
+| `--model` | `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini` | Default: `gpt-image-1.5` |
+| `--dry-run` | — | Print payload without making an API call |
+| `--force` | — | Overwrite if output file already exists |
+
+### Generate a single image
+
+```bash
+python "$IMAGE_GEN" generate \
+  --prompt "A cozy alpine cabin at dawn" \
+  --size 1024x1024 \
+  --out output/imagegen/alpine-cabin.png
+```
+
+### Generate with augmentation fields
+
+```bash
+python "$IMAGE_GEN" generate \
+  --prompt "A minimal hero image of a ceramic coffee mug" \
+  --use-case "product-mockup" \
+  --style "clean product photography" \
+  --composition "wide product shot with usable negative space for page copy" \
+  --constraints "no logos, no text" \
+  --out output/imagegen/mug-hero.png
+```
+
+### Edit an existing image
+
+```bash
+python "$IMAGE_GEN" edit \
+  --image input.png \
+  --prompt "Replace only the background with a warm sunset gradient" \
+  --quality high \
+  --input-fidelity high \
+  --out output/imagegen/sunset-edit.png
+```
+
+### Batch generation from a JSONL file
+
+```bash
+mkdir -p tmp/imagegen output/imagegen/batch
+
+cat > tmp/imagegen/prompts.jsonl << 'EOF'
+{"prompt":"Cavernous hangar interior with a compact shuttle","use_case":"stylized-concept","size":"1536x1024"}
+{"prompt":"Gray wolf in profile in a snowy forest","use_case":"photorealistic-natural","size":"1024x1024"}
+EOF
+
+python "$IMAGE_GEN" generate-batch \
+  --input tmp/imagegen/prompts.jsonl \
+  --out-dir output/imagegen/batch \
+  --concurrency 5
+
+rm -f tmp/imagegen/prompts.jsonl
+```
+
+<Info>
+  `generate-batch` requires `--out-dir`. Use `--concurrency` to set parallelism (default `5`). Per-job overrides like `size`, `quality`, `background`, and `output_format` are supported directly in each JSONL row.
+</Info>
+
+### Output path conventions (CLI only)
+
+- Temporary scratch files → `tmp/imagegen/`
+- Final outputs → `output/imagegen/`
+- Use `--out-dir` to auto-name outputs as `image_1.png`, `image_2.png`, etc.
+- Downscaled web copies use the `-web` suffix by default
+
+### Dry-run (no API call needed)
+
+```bash
+python "$IMAGE_GEN" generate \
+  --prompt "Test" \
+  --out output/imagegen/test.png \
+  --dry-run
+```

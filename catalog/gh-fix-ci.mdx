@@ -1,0 +1,147 @@
+---
+title: "GitHub Fix CI Skill: Diagnose and Repair Pipelines"
+sidebarTitle: "Fix CI"
+description: "Diagnose failing GitHub Actions checks on a PR, summarize root causes from logs, and implement a fix only after you approve the plan."
+---
+
+The **gh-fix-ci** skill turns a failing CI pipeline into an actionable repair plan. It uses the `gh` CLI to find failing GitHub Actions checks on the current PR, downloads the relevant run logs, extracts the failure snippet, proposes a concise fix, and waits for your explicit approval before touching any code. External CI providers such as Buildkite are intentionally out of scope — the skill reports their details URL and moves on.
+
+## Trigger Conditions
+
+Codex activates this skill when you ask it to:
+
+- Debug or fix failing GitHub Actions checks
+- Investigate why CI is red on a PR
+- Diagnose a broken pipeline and propose a fix
+- Summarize CI log failures on the current branch
+
+<Note>
+  This skill applies only to **GitHub Actions** checks. Checks from external providers (Buildkite, CircleCI, etc.) are flagged with their `detailsUrl` only — Codex does not attempt to fetch their logs.
+</Note>
+
+## Prerequisites
+
+Authenticate the GitHub CLI once with repo and workflow scopes before running this skill:
+
+```bash
+gh auth login
+```
+
+Verify authentication:
+
+```bash
+gh auth status
+```
+
+Both `repo` and `workflow` scopes are required so the skill can read check runs and download logs.
+
+## Workflow
+
+<Steps>
+  <Step title="Verify gh authentication">
+    The skill runs `gh auth status` in the repo. If the token is missing or lacks required scopes, Codex pauses and asks you to run `gh auth login` before proceeding.
+  </Step>
+
+  <Step title="Resolve the PR">
+    Codex prefers the PR for the current branch:
+
+    ```bash
+    gh pr view --json number,url
+    ```
+
+    If you supply a PR number or URL explicitly, that takes precedence.
+  </Step>
+
+  <Step title="Inspect failing checks">
+    The bundled `inspect_pr_checks.py` script fetches all GitHub Actions check runs, identifies failures, and pulls the relevant log lines:
+
+    ```bash
+    python "<skill-path>/scripts/inspect_pr_checks.py" --repo "." --pr "<number-or-url>"
+    ```
+
+    Add `--json` for machine-readable output, or tune snippet size with `--max-lines` and `--context`:
+
+    ```bash
+    python "<skill-path>/scripts/inspect_pr_checks.py" \
+      --repo "." \
+      --pr "123" \
+      --json
+
+    python "<skill-path>/scripts/inspect_pr_checks.py" \
+      --repo "." \
+      --max-lines 200 \
+      --context 40
+    ```
+
+    If the bundled script is unavailable, Codex falls back to manual `gh` commands:
+
+    ```bash
+    # List checks
+    gh pr checks <pr> --json name,state,bucket,link,startedAt,completedAt,workflow
+
+    # Fetch run details and logs
+    gh run view <run_id> --json name,workflowName,conclusion,status,url,event,headBranch,headSha
+    gh run view <run_id> --log
+
+    # Fetch job logs directly if the run is still in progress
+    gh api "/repos/<owner>/<repo>/actions/jobs/<job_id>/logs" > logs.txt
+    ```
+  </Step>
+
+  <Step title="Scope external checks">
+    Any check whose `detailsUrl` does not point to a GitHub Actions run is labeled as external. Codex reports the URL and does not fetch logs from that provider.
+  </Step>
+
+  <Step title="Summarize failures">
+    Codex presents each failing check with its name, run URL, and a concise log snippet highlighting the error. Missing logs are called out explicitly.
+  </Step>
+
+  <Step title="Propose a fix plan">
+    Codex drafts a focused plan describing what needs to change to make CI green. If the `create-plan` skill is available, it is used to structure the plan and request your approval. Otherwise, the plan is drafted inline.
+  </Step>
+
+  <Step title="Implement after approval">
+    Only after you approve the plan does Codex apply changes. It then summarizes the diffs and any test results, and asks whether you want to open or push to the PR.
+  </Step>
+
+  <Step title="Recheck status">
+    After the fix lands, Codex suggests re-running the relevant tests locally and confirms CI status with:
+
+    ```bash
+    gh pr checks
+    ```
+  </Step>
+</Steps>
+
+## The `inspect_pr_checks.py` Script
+
+The bundled script handles common edge cases that raw `gh` commands miss:
+
+<CardGroup cols={2}>
+  <Card title="Field drift tolerance" icon="arrows-rotate">
+    Retries `gh pr checks` with the available field set when GitHub's API drops or renames a field.
+  </Card>
+  <Card title="Job-log fallbacks" icon="file-lines">
+    Falls back to per-job log fetches when the run-level log is unavailable or still streaming.
+  </Card>
+  <Card title="Non-zero exit on failure" icon="circle-xmark">
+    Exits non-zero when failing checks remain, making it safe to use in automation pipelines.
+  </Card>
+  <Card title="JSON mode" icon="brackets-curly">
+    `--json` emits structured output for downstream summarization or scripting.
+  </Card>
+</CardGroup>
+
+## Default Prompt
+
+When launched from the Codex skill menu, this skill starts with:
+
+> "Inspect failing GitHub Actions checks in this repo, summarize root cause, and propose a focused fix plan."
+
+## Installing
+
+```bash
+$skill-installer gh-fix-ci
+```
+
+Restart Codex after installation to pick up the new skill.

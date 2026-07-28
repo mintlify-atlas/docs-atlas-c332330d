@@ -1,0 +1,145 @@
+---
+title: "Figma MCP Skill: Design-to-Code in Codex"
+sidebarTitle: "Figma"
+description: "Fetch design context, screenshots, variables, and assets from Figma via the MCP server and translate them into production-ready code."
+---
+
+The Figma skill connects Codex to the [Figma MCP server](https://mcp.figma.com/mcp), enabling a fully grounded design-to-code workflow. Rather than copying design values by hand, Codex calls the MCP tools directly to retrieve structured node data, visual screenshots, design variables, and image assets—then translates that output into your project's own conventions, component library, and token system. Every Figma-driven change follows a strict fetch-first, implement-second flow to guarantee 1:1 visual fidelity.
+
+<Note>
+  This is a **curated skill** that must be installed before use, and it requires
+  an active Figma MCP server connection. See the [MCP dependency](#mcp-dependency)
+  section below.
+</Note>
+
+## Installing
+
+```bash
+$skill-installer figma
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## What This Skill Does
+
+The Figma skill instructs Codex to use the Figma MCP server to:
+
+- Fetch **structured design context** (node properties, layout, styles, components) with `get_design_context`
+- Retrieve a **visual screenshot** of any node variant with `get_screenshot`
+- Query the **high-level node map** when responses are too large via `get_metadata`
+- **Download image and SVG assets** served by the MCP asset endpoint
+- Translate all of the above into your project's framework, component library, and design tokens
+
+## Trigger Conditions
+
+Codex activates this skill when a task involves any of the following:
+
+<CardGroup cols={2}>
+  <Card title="Figma URLs" icon="link">
+    A Figma frame or layer URL is present in the prompt or context.
+  </Card>
+  <Card title="Node IDs" icon="hash">
+    A raw Figma node ID is referenced for a specific component or variant.
+  </Card>
+  <Card title="Design-to-code requests" icon="paintbrush">
+    The task asks Codex to implement a design, match a mockup, or replicate a
+    Figma screen.
+  </Card>
+  <Card title="Figma MCP setup" icon="gear">
+    The task involves configuring, verifying, or troubleshooting the Figma MCP
+    server connection.
+  </Card>
+</CardGroup>
+
+## Required Flow
+
+Codex follows this sequence for every Figma-driven change and never skips steps:
+
+<Steps>
+  <Step title="Fetch design context">
+    Call `get_design_context` for the exact node(s) referenced in the task to
+    retrieve the full structured representation.
+  </Step>
+  <Step title="Resolve large responses">
+    If the response is too large or truncated, call `get_metadata` to get the
+    high-level node map, then re-fetch only the required node(s) with
+    `get_design_context`.
+  </Step>
+  <Step title="Get a visual reference">
+    Call `get_screenshot` to obtain a rendered image of the target node or
+    variant before writing any code.
+  </Step>
+  <Step title="Download assets">
+    Download all image and SVG assets from the MCP asset endpoint before
+    starting implementation. Use the `localhost` source URLs provided by the
+    server directly—never substitute placeholders.
+  </Step>
+  <Step title="Implement">
+    Translate the Figma output into the project's own framework, conventions,
+    and design tokens. Validate the finished UI against the Figma screenshot for
+    both appearance and behavior.
+  </Step>
+</Steps>
+
+## Implementation Rules
+
+Codex treats Figma MCP output as a **representation** of the design intent, not as final code to ship as-is. The following rules apply to every translation:
+
+- **Replace Tailwind utilities** with the project's preferred design-system tokens, utility classes, or CSS variables.
+- **Reuse existing components** — buttons, inputs, typography wrappers, icon containers — instead of duplicating functionality from the MCP output.
+- **Apply the project's token system** for colors, typography scale, and spacing consistently throughout the implementation.
+- **Respect existing patterns** for routing, state management, and data fetching already established in the repository.
+- **Strive for 1:1 visual parity.** When conflicts arise between design-system tokens and raw Figma values, prefer the tokens and adjust spacing or sizes minimally to match visuals.
+- **Validate** the finished UI against the Figma screenshot for both look and behavior before marking the task complete.
+
+## Asset Handling
+
+<Warning>
+  Never create placeholder images when the Figma MCP server provides a
+  `localhost` asset URL. Never import or install a new icon package — all
+  assets should come from the Figma payload.
+</Warning>
+
+- The Figma MCP server exposes an asset endpoint that serves image and SVG files.
+- If the server returns a `localhost` source for an image or SVG, use that URL directly in your code.
+- Do not add new icon libraries or asset packages to satisfy design requirements; everything needed is in the MCP payload.
+
+## MCP Dependency
+
+This skill requires the Figma MCP server to be running and reachable. The server configuration is:
+
+```yaml
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "figma"
+      description: "Figma MCP server"
+      transport: "streamable_http"
+      url: "https://mcp.figma.com/mcp"
+```
+
+For full setup instructions, environment variable configuration, server verification steps, and troubleshooting guidance, see `references/figma-mcp-config.md` inside the installed skill directory.
+
+## Link-Based Prompting
+
+The Figma MCP server is **link-based**: Codex cannot browse Figma directly, but it extracts the node ID from a copied frame or layer URL.
+
+<Tip>
+  Copy the exact Figma frame or layer link — not the top-level file URL — and
+  paste it into your prompt. The link must point to the specific node or variant
+  you want implemented so Codex fetches the right context.
+</Tip>
+
+Example prompt pattern:
+
+```text
+Implement this component: https://www.figma.com/design/<file-key>?node-id=<node-id>
+```
+
+## Default Prompt
+
+The skill ships with this default prompt, which you can use as a starting point:
+
+```text
+Use $figma to inspect the target design and translate it into implementable UI decisions.
+```

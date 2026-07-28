@@ -1,0 +1,261 @@
+---
+title: "Plugin Creator: Package Skills as Codex Plugins"
+sidebarTitle: "Plugin Creator"
+description: "Scaffolds Codex plugin directories with a valid plugin.json manifest, optional structure folders, and marketplace.json entries ready to publish locally."
+---
+
+A plugin is the packaging format that bundles one or more skills together with optional hooks, MCP server configs, app connectors, and interface metadata into a single installable unit. Where a skill extends Codex with a workflow, a plugin makes that workflow — and everything it needs — distributable, discoverable in Codex's marketplace UI, and installable by others with a single action. The Plugin Creator skill scaffolds the required directory structure, fills in a complete `plugin.json` manifest with placeholder values, and optionally generates or updates a `marketplace.json` entry for install ordering and availability control.
+
+<Note>
+  The Plugin Creator is a **system skill** — it is pre-installed in every Codex environment and cannot be removed by users.
+</Note>
+
+## Plugins vs. skills
+
+| Concept | What it is |
+|---|---|
+| **Skill** | A self-contained folder with `SKILL.md` that teaches Codex a specialized workflow |
+| **Plugin** | An installable bundle that can contain skills, hooks, MCP config, app connectors, assets, and marketplace metadata |
+
+Use a plugin when you want to distribute a collection of capabilities as a single installable package, expose your work in Codex's plugin marketplace, or combine skills with hooks and MCP server configuration.
+
+## When to use plugin-creator
+
+Reach for this skill when you want to:
+
+- Create a new local plugin with the required `plugin.json` structure
+- Add optional companion folders (`skills/`, `hooks/`, `scripts/`, `assets/`, `.mcp.json`, `.app.json`)
+- Generate or update `marketplace.json` entries for plugin ordering and availability metadata
+- Normalize a plugin name and ensure it follows Codex naming conventions
+
+## Quick start
+
+<Steps>
+  <Step title="Run the scaffold script">
+    ```bash
+    # Creates plugins/<plugin-name>/ at the repo root by default
+    python3 .agents/skills/plugin-creator/scripts/create_basic_plugin.py <plugin-name>
+    ```
+  </Step>
+  <Step title="Fill in the placeholders">
+    Open `.codex-plugin/plugin.json` inside the new plugin folder and replace every `[TODO: ...]` value with real content.
+  </Step>
+  <Step title="Add a marketplace entry (optional)">
+    ```bash
+    python3 .agents/skills/plugin-creator/scripts/create_basic_plugin.py my-plugin \
+      --with-marketplace
+    ```
+    This creates or updates `<repo-root>/.agents/plugins/marketplace.json`.
+  </Step>
+  <Step title="Scaffold optional structure">
+    ```bash
+    python3 .agents/skills/plugin-creator/scripts/create_basic_plugin.py my-plugin \
+      --path <parent-plugin-directory> \
+      --with-skills \
+      --with-hooks \
+      --with-scripts \
+      --with-assets \
+      --with-mcp \
+      --with-apps \
+      --with-marketplace
+    ```
+  </Step>
+</Steps>
+
+## Script flags
+
+| Flag | Description |
+|---|---|
+| `<plugin-name>` | Plugin name (normalized to lowercase hyphen-case, max 64 chars) |
+| `--path <dir>` | Parent directory where the plugin folder is created (default: `<repo-root>/plugins`) |
+| `--with-skills` | Create a `skills/` directory |
+| `--with-hooks` | Create a `hooks/` directory |
+| `--with-scripts` | Create a `scripts/` directory |
+| `--with-assets` | Create a `assets/` directory |
+| `--with-mcp` | Create a `.mcp.json` placeholder |
+| `--with-apps` | Create a `.app.json` placeholder |
+| `--with-marketplace` | Generate or update `marketplace.json` |
+| `--marketplace-path <path>` | Override marketplace file location |
+| `--force` | Overwrite an existing marketplace entry for the same plugin name |
+
+## Plugin name normalization
+
+Plugin names are always lowercased and hyphen-delimited:
+
+| Input | Normalized |
+|---|---|
+| `My Plugin` | `my-plugin` |
+| `My--Plugin` | `my-plugin` |
+| `analytics_tool` | `analytics-tool` |
+| `Data Viz 2` | `data-viz-2` |
+
+The outer folder name and the `name` field in `plugin.json` are always identical.
+
+## The `plugin.json` manifest
+
+Every plugin must contain `.codex-plugin/plugin.json`. Here is the complete canonical structure:
+
+```json
+{
+  "name": "plugin-name",
+  "version": "1.2.0",
+  "description": "Brief plugin description",
+  "author": {
+    "name": "Author Name",
+    "email": "author@example.com",
+    "url": "https://github.com/author"
+  },
+  "homepage": "https://docs.example.com/plugin",
+  "repository": "https://github.com/author/plugin",
+  "license": "MIT",
+  "keywords": ["keyword1", "keyword2"],
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "apps": "./.app.json",
+  "interface": {
+    "displayName": "Plugin Display Name",
+    "shortDescription": "Short description for subtitle",
+    "longDescription": "Long description for details page",
+    "developerName": "OpenAI",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://openai.com/",
+    "privacyPolicyURL": "https://openai.com/policies/row-privacy-policy/",
+    "termsOfServiceURL": "https://openai.com/policies/row-terms-of-use/",
+    "defaultPrompt": [
+      "Summarize my inbox and draft replies for me.",
+      "Find open bugs and turn them into Linear tickets.",
+      "Review today's meetings and flag scheduling gaps."
+    ],
+    "brandColor": "#3B82F6",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png",
+    "screenshots": [
+      "./assets/screenshot1.png",
+      "./assets/screenshot2.png",
+      "./assets/screenshot3.png"
+    ]
+  }
+}
+```
+
+### Top-level field reference
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Kebab-case plugin identifier. Required. Must match the folder name. |
+| `version` | string | Semantic version string |
+| `description` | string | Short purpose summary |
+| `author` | object | Publisher identity (`name`, `email`, `url`) |
+| `homepage` | string | Documentation URL |
+| `repository` | string | Source code URL |
+| `license` | string | License identifier, e.g. `MIT`, `Apache-2.0` |
+| `keywords` | string[] | Search and discovery tags |
+| `skills` | string | Relative path to skill directories |
+| `hooks` | string | Hook config file path |
+| `mcpServers` | string | MCP config file path |
+| `apps` | string | App manifest path |
+| `interface` | object | UX and marketplace presentation metadata |
+
+### `interface` field reference
+
+| Field | Type | Notes |
+|---|---|---|
+| `displayName` | string | User-facing title shown in marketplace |
+| `shortDescription` | string | Brief subtitle in compact views |
+| `longDescription` | string | Longer description on detail screens |
+| `developerName` | string | Human-readable publisher name |
+| `category` | string | Plugin category bucket |
+| `capabilities` | string[] | Capability list, e.g. `["Interactive", "Write"]` |
+| `websiteURL` | string | Plugin's public website |
+| `privacyPolicyURL` | string | Privacy policy URL |
+| `termsOfServiceURL` | string | Terms of service URL |
+| `defaultPrompt` | string[] | Up to 3 starter prompts (~50 chars each); extras are ignored |
+| `brandColor` | string | Hex theme color for the plugin card |
+| `composerIcon` | string | Path to composer icon asset |
+| `logo` | string | Path to logo asset |
+| `screenshots` | string[] | PNG paths under `./assets/`; relative to plugin root |
+
+<Tip>
+  Keep `defaultPrompt` entries around 50 characters so they scan well in the Codex UI. Entries longer than 128 characters are truncated, and only the first 3 entries are ever shown.
+</Tip>
+
+## Marketplace entries
+
+When `--with-marketplace` is set, the script creates or updates `marketplace.json`:
+
+- **Repo plugin**: `<repo-root>/.agents/plugins/marketplace.json`
+- **Home-local plugin**: `~/.agents/plugins/marketplace.json`
+
+### Marketplace entry shape
+
+```json
+{
+  "name": "plugin-name",
+  "source": {
+    "source": "local",
+    "path": "./plugins/plugin-name"
+  },
+  "policy": {
+    "installation": "AVAILABLE",
+    "authentication": "ON_INSTALL"
+  },
+  "category": "Productivity"
+}
+```
+
+### Policy values
+
+| Field | Allowed values | Default |
+|---|---|---|
+| `policy.installation` | `NOT_AVAILABLE`, `AVAILABLE`, `INSTALLED_BY_DEFAULT` | `AVAILABLE` |
+| `policy.authentication` | `ON_INSTALL`, `ON_USE` | `ON_INSTALL` |
+
+### Full marketplace file structure
+
+```json
+{
+  "name": "[TODO: marketplace-name]",
+  "interface": {
+    "displayName": "[TODO: Marketplace Display Name]"
+  },
+  "plugins": [
+    {
+      "name": "my-plugin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/my-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
+```
+
+<Info>
+  Plugin order in `plugins[]` determines render order in the Codex UI. New entries are appended unless you explicitly ask to reorder. Use `--force` only when intentionally replacing an existing entry.
+</Info>
+
+## Home-local plugin
+
+For a plugin that lives in your home directory rather than a repo:
+
+```bash
+python3 .agents/skills/plugin-creator/scripts/create_basic_plugin.py my-plugin \
+  --path ~/plugins \
+  --marketplace-path ~/.agents/plugins/marketplace.json \
+  --with-marketplace
+```
+
+## Validation
+
+After scaffolding, validate the embedded skill using the skill-creator validator:
+
+```bash
+python3 <path-to-skill-creator>/scripts/quick_validate.py .agents/skills/plugin-creator
+```

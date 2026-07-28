@@ -1,0 +1,107 @@
+---
+title: "Yeet Skill: Quick File Publishing from Codex"
+sidebarTitle: "Yeet"
+description: "Stage, commit, push, and open a GitHub pull request in one Codex flow — branch naming, PR templates, and conventional commit messages included."
+---
+
+The `yeet` skill compresses the entire "I'm done coding, time to open a PR" sequence into a single Codex prompt. It stages your changes, writes a focused conventional commit message, pushes to a tracking branch, discovers and applies your repository's PR template (if one exists), and opens a well-structured draft pull request — all through the GitHub CLI (`gh`). What normally takes several terminal commands and careful copy-pasting happens in one coherent, reviewable flow.
+
+## Trigger conditions
+
+`yeet` activates **only when you explicitly ask to publish changes as a pull request**. Common triggers include:
+
+- "Yeet this"
+- "Open a PR for these changes"
+- "Stage, commit, and push — open a draft PR"
+- "Prepare this branch for review"
+
+<Warning>
+  This skill requires both the **GitHub CLI** (`gh`) and an authenticated `gh` session. Codex will check for both prerequisites and stop with clear instructions if either is missing.
+</Warning>
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install the GitHub CLI">
+    Follow the instructions at [cli.github.com](https://cli.github.com) for your platform, then confirm the install:
+    ```bash
+    gh --version
+    ```
+  </Step>
+  <Step title="Authenticate">
+    ```bash
+    gh auth login
+    gh auth status
+    ```
+  </Step>
+</Steps>
+
+## Workflow
+
+Once prerequisites are confirmed, `yeet` runs through the following steps automatically:
+
+<Steps>
+  <Step title="Branch">
+    If you are on `main`, `master`, or the default branch, a new branch is created using your change description as the name. If you are already on a feature branch, the skill stays put.
+  </Step>
+  <Step title="Stage and commit">
+    Runs `git status -sb` to confirm what is changing, then `git add -A` to stage everything. Commits with a terse conventional commit message in the format `<type>(<scope>): <subject>` (e.g., `feat: add hat wobble`).
+  </Step>
+  <Step title="Run checks">
+    If pre-push checks are configured and have not yet run, the skill runs them. If they fail due to missing dependencies, it installs deps and retries once.
+  </Step>
+  <Step title="Push">
+    Pushes with upstream tracking: `git push -u origin <current-branch>`. If the push fails due to workflow auth errors, it pulls from the default branch and retries.
+  </Step>
+  <Step title="Discover PR template">
+    Searches for an active GitHub PR template in this order:
+    - `.github/pull_request_template.md`
+    - `.github/PULL_REQUEST_TEMPLATE.md`
+    - A single `*.md` file under `.github/pull_request_template/`
+    - A single `*.md` file under `.github/PULL_REQUEST_TEMPLATE/`
+
+    If exactly one template is found it is read and passed to `gh pr create --template`. If multiple are found, Codex pauses and asks which to use.
+  </Step>
+  <Step title="Open or update the PR">
+    Checks whether a PR already exists for the current branch. If yes, it updates the title and body in place — never converting a ready-for-review PR back to draft. If no PR exists, it opens a new **draft** PR.
+  </Step>
+  <Step title="Write the PR body">
+    The body leads with **Why** (the motivation, captured from your conversation with Codex) followed by **What Changed** (the net implementation diff). Images in existing PR bodies are always preserved.
+  </Step>
+</Steps>
+
+## PR title convention
+
+Titles follow the conventional commit format:
+
+```text
+<type>(<scope>): <subject>
+```
+
+| Type | When to use |
+|---|---|
+| `feat` | New user-facing feature |
+| `fix` | Bug fix for users |
+| `docs` | Documentation changes |
+| `style` | Formatting, missing semicolons — no logic change |
+| `refactor` | Code restructuring with no behavior change |
+| `test` | Adding or refactoring tests |
+| `chore` | Build tooling, dependency updates, etc. |
+
+`<scope>` is optional and names the component, service, or subsystem being changed.
+
+## Default prompt
+
+When you install the skill, its default prompt is:
+
+> "Prepare this branch for review: stage intended changes, write a focused commit, and open a PR."
+
+## Installing
+
+```bash
+$skill-installer yeet
+```
+
+<Note>
+  Restart Codex after installing to pick up the new skill.
+</Note>

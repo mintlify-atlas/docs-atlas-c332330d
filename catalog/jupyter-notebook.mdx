@@ -1,0 +1,130 @@
+---
+title: "Jupyter Notebook Skill: Notebooks in Codex"
+sidebarTitle: "Jupyter"
+description: "Scaffold, create, and edit Jupyter notebooks for experiments and tutorials using bundled templates and a helper script that avoids raw JSON errors."
+---
+
+The **jupyter-notebook** skill lets Codex create clean, reproducible `.ipynb` notebooks without ever hand-authoring notebook JSON. It ships two templates — one for exploratory experiments, one for teaching-oriented tutorials — and a helper script that scaffolds a correct notebook structure from either template. Codex uses this skill whenever you ask it to build a new notebook, convert rough notes into structured cells, or refactor an existing notebook for reproducibility.
+
+## Trigger Conditions
+
+Codex activates this skill when you ask it to:
+
+- Create a new `.ipynb` notebook from scratch
+- Build an experiment, analysis, or hypothesis-testing notebook
+- Write a tutorial or step-by-step instructional notebook
+- Convert rough notes or scripts into a structured notebook
+- Refactor an existing notebook for reproducibility or readability
+
+## Decision Tree
+
+| Request type | Template chosen |
+|---|---|
+| Exploratory, analytical, or hypothesis-driven | `experiment` |
+| Instructional, step-by-step, or audience-specific | `tutorial` |
+| Editing an existing notebook | Refactor in place — preserve intent, improve structure |
+
+## Setting Up the Script Path
+
+The skill sets `$JUPYTER_NOTEBOOK_CLI` once per session:
+
+```bash
+export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+export JUPYTER_NOTEBOOK_CLI="$CODEX_HOME/skills/jupyter-notebook/scripts/new_notebook.py"
+```
+
+User-scoped skills install under `$CODEX_HOME/skills` (default: `~/.codex/skills`).
+
+## Workflow
+
+<Steps>
+  <Step title="Lock the intent">
+    Before scaffolding, identify the notebook kind (`experiment` or `tutorial`), the objective, the intended audience, and what "done" looks like. This shapes the template and cell structure.
+  </Step>
+
+  <Step title="Scaffold from the template">
+    Run the helper script to generate a clean starting notebook. The script loads the correct template, updates the title cell, and writes a valid `.ipynb` file — no manual JSON editing required.
+
+    <CodeGroup>
+    ```bash Experiment notebook
+    uv run --python 3.12 python "$JUPYTER_NOTEBOOK_CLI" \
+      --kind experiment \
+      --title "Compare prompt variants" \
+      --out output/jupyter-notebook/compare-prompt-variants.ipynb
+    ```
+
+    ```bash Tutorial notebook
+    uv run --python 3.12 python "$JUPYTER_NOTEBOOK_CLI" \
+      --kind tutorial \
+      --title "Intro to embeddings" \
+      --out output/jupyter-notebook/intro-to-embeddings.ipynb
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Fill the notebook with small, runnable steps">
+    Keep each code cell focused on one step. Add short markdown cells that explain the purpose and expected result. Avoid large, noisy outputs when a concise summary works better.
+  </Step>
+
+  <Step title="Apply the right pattern">
+    For experiments, the skill follows `references/experiment-patterns.md` (hypothesis → setup → run → analyze → conclusion). For tutorials, it follows `references/tutorial-patterns.md` (context → concepts → guided exercises → recap).
+  </Step>
+
+  <Step title="Edit existing notebooks safely">
+    When working with an existing notebook, the skill preserves the cell order and overall structure unless reordering genuinely improves the story. It prefers targeted edits over full rewrites. If raw JSON editing is needed, it reviews `references/notebook-structure.md` first.
+  </Step>
+
+  <Step title="Validate the result">
+    Run the notebook top-to-bottom when the environment allows. If execution is not possible, the skill says so explicitly and tells you how to validate it locally.
+  </Step>
+</Steps>
+
+## Templates and Helper Script
+
+<CardGroup cols={2}>
+  <Card title="Experiment template" icon="flask">
+    `assets/experiment-template.ipynb` — structured for hypothesis-driven work: setup, run, analysis, and conclusion sections pre-scaffolded.
+  </Card>
+  <Card title="Tutorial template" icon="book-open">
+    `assets/tutorial-template.ipynb` — structured for teaching: context, concept explanation, guided exercises, and a recap section.
+  </Card>
+</CardGroup>
+
+The helper script (`new_notebook.py`) uses only the Python standard library — no extra dependencies are required to scaffold notebooks.
+
+## Dependencies
+
+The scaffold script requires no additional packages. For local notebook execution, install JupyterLab and a kernel using `uv`:
+
+```bash
+uv pip install jupyterlab ipykernel
+```
+
+## Output Conventions
+
+- Write final notebooks under `output/jupyter-notebook/` when working in this repo.
+- Use `tmp/jupyter-notebook/` for intermediate files and delete them when done.
+- Choose stable, descriptive filenames — for example, `ablation-temperature.ipynb` or `intro-to-embeddings.ipynb`.
+
+## Reference Map
+
+| Reference file | Purpose |
+|---|---|
+| `references/experiment-patterns.md` | Experiment structure and heuristics |
+| `references/tutorial-patterns.md` | Tutorial structure and teaching flow |
+| `references/notebook-structure.md` | Notebook JSON shape and safe editing rules |
+| `references/quality-checklist.md` | Final validation checklist |
+
+## Default Prompt
+
+When launched from the Codex skill menu, this skill starts with:
+
+> "Create a Jupyter notebook for this task with clear sections, runnable cells, and concise takeaways."
+
+## Installing
+
+```bash
+$skill-installer jupyter-notebook
+```
+
+Restart Codex after installation to pick up the new skill.

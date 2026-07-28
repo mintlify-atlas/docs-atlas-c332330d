@@ -1,0 +1,191 @@
+---
+title: "Netlify Deploy Skill: Deploy Sites to Netlify"
+sidebarTitle: "Netlify"
+description: "Deploy any web project to Netlify from Codex using the Netlify CLI — preview and production deploys, auth checks, and site linking included."
+---
+
+The Netlify Deploy skill gives Codex everything it needs to deploy web projects to Netlify without leaving your workspace. Ask Codex to **"deploy this site to Netlify"**, **"publish my app"**, or **"host this on Netlify"** and it will verify your authentication, link or create a Netlify site, install dependencies, and push a deployment — surfacing the deploy URL when done. Preview deploys are the safe default; production only runs when you explicitly ask for it.
+
+## Trigger Phrases
+
+Codex activates this skill when it detects Netlify deployment intent. Common phrases include:
+
+- "deploy to Netlify"
+- "publish my site on Netlify"
+- "host this on Netlify"
+- "push a preview to Netlify"
+- "link this repo to Netlify and deploy"
+
+## Installing
+
+```bash
+$skill-installer netlify-deploy
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Netlify CLI" icon="terminal">
+    Runs via `npx netlify` — no global install required. Codex invokes it directly.
+  </Card>
+  <Card title="Authentication" icon="key">
+    A Netlify account with an active login session. Browser OAuth or an API token both work.
+  </Card>
+  <Card title="Project" icon="folder-open">
+    A valid web project in the current directory — static HTML, a framework build, or anything Netlify can build.
+  </Card>
+  <Card title="Network Access" icon="globe">
+    If sandbox networking blocks outbound requests, Codex will ask to rerun with `sandbox_permissions=require_escalated`.
+  </Card>
+</CardGroup>
+
+## Deployment Workflow
+
+<Steps>
+  <Step title="Verify Authentication">
+    Codex checks whether you are logged into Netlify:
+
+    ```bash
+    npx netlify status
+    ```
+
+    - ✅ **Authenticated** — shows your logged-in email and site link status.
+    - ❌ **Not authenticated** — Codex prompts you to log in.
+
+    **Browser OAuth (primary):**
+    ```bash
+    npx netlify login
+    ```
+
+    **API key alternative** — set the token as an environment variable:
+    ```bash
+    export NETLIFY_AUTH_TOKEN=your_token_here
+    ```
+    Generate tokens at: `https://app.netlify.com/user/applications#personal-access-tokens`
+  </Step>
+
+  <Step title="Detect Site Link Status">
+    From the `netlify status` output, Codex determines whether the project is already linked to a Netlify site, or whether a site needs to be created or linked.
+  </Step>
+
+  <Step title="Link or Create a Site">
+    **If already linked** — skip ahead to dependency installation.
+
+    **If not linked**, Codex first tries to link via Git remote:
+
+    ```bash
+    git remote show origin
+    npx netlify link --git-remote-url https://github.com/user/repo
+    ```
+
+    If no Netlify site exists for this repo, Codex falls back to interactive site creation:
+
+    ```bash
+    npx netlify init
+    ```
+
+    This walks you through choosing a team, setting a site name, and configuring build settings.
+  </Step>
+
+  <Step title="Install Dependencies">
+    Before deploying, Codex ensures project dependencies are installed:
+
+    ```bash
+    # npm (default)
+    npm install
+
+    # Yarn / pnpm — detected automatically from lockfile
+    yarn install
+    pnpm install
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    **Preview deploy** (default for existing sites):
+
+    ```bash
+    npx netlify deploy
+    ```
+
+    Creates a deploy preview with a unique URL for testing before going live.
+
+    **Production deploy** (only when explicitly requested):
+
+    ```bash
+    npx netlify deploy --prod
+    ```
+  </Step>
+
+  <Step title="Report Results">
+    Codex surfaces the deployment details:
+
+    - **Deploy URL** — unique URL for this specific deployment
+    - **Site URL** — production URL (for production deploys)
+    - **Dashboard link** — for viewing build logs in the Netlify UI
+  </Step>
+</Steps>
+
+## Build Configuration
+
+If a `netlify.toml` file exists in your project root, the CLI picks it up automatically. If not, the CLI will prompt for a build command and publish directory.
+
+Common framework defaults Codex will suggest:
+
+| Framework | Build Command | Publish Directory |
+|-----------|---------------|-------------------|
+| Next.js | `npm run build` | `.next` |
+| React (Vite) | `npm run build` | `dist` |
+| Create React App | `npm run build` | `build` |
+| Static HTML | *(none)* | `.` (current dir) |
+
+## Error Handling
+
+<CardGroup cols={2}>
+  <Card title="Not logged in" icon="circle-exclamation">
+    Run `npx netlify login` to authenticate via browser OAuth, or set `NETLIFY_AUTH_TOKEN`.
+  </Card>
+  <Card title="No site linked" icon="link-slash">
+    Run `npx netlify link` to connect an existing site, or `npx netlify init` to create a new one.
+  </Card>
+  <Card title="Build failed" icon="triangle-exclamation">
+    Check the build command and publish directory. Verify dependencies are installed and review build logs for specifics.
+  </Card>
+  <Card title="Publish directory not found" icon="folder-xmark">
+    Confirm the build command completed successfully and the publish path in `netlify.toml` or CLI settings is correct.
+  </Card>
+</CardGroup>
+
+## Escalated Network Access
+
+If the deploy fails due to network issues (timeouts, DNS errors, connection resets), Codex will prompt before retrying with elevated permissions:
+
+```
+The deploy needs escalated network access to deploy to Netlify.
+I can rerun the command with escalated permissions — want me to proceed?
+```
+
+## Useful Follow-up Commands
+
+After a successful deploy, you can ask Codex to run:
+
+```bash
+# Open site or dashboard in browser
+npx netlify open
+
+# View Netlify Function logs
+npx netlify logs
+
+# Start local dev server with Netlify Functions
+npx netlify dev
+```
+
+<Tip>
+  Always run `npx netlify deploy` (without `--prod`) first to validate your build on a preview URL before promoting to production.
+</Tip>
+
+## Reference
+
+- [Netlify CLI Docs](https://docs.netlify.com/cli/get-started/)
+- [netlify.toml Reference](https://docs.netlify.com/configure-builds/file-based-configuration/)

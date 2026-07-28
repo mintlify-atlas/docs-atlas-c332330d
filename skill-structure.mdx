@@ -1,0 +1,148 @@
+---
+title: "Skill Directory Structure and File Layout Reference"
+sidebarTitle: "Structure"
+description: "The canonical directory layout for an OpenAI Skill — every file and folder, their roles, naming conventions, and what to leave out."
+---
+
+Every skill is a self-contained directory. The structure is deliberately minimal: one required file, one recommended file, and three optional subdirectories. This simplicity is intentional — a skill should contain only what an AI agent needs to do the job, nothing more. Understanding the layout helps you write skills that are lean, discoverable, and effective.
+
+## Canonical Directory Layout
+
+```
+skill-name/
+├── SKILL.md              ← required
+├── agents/
+│   └── openai.yaml       ← recommended
+├── scripts/              ← optional
+├── references/           ← optional
+└── assets/               ← optional
+```
+
+### `SKILL.md` (required)
+
+The only file every skill must have. It consists of two parts:
+
+- **YAML frontmatter** — Contains `name` and `description`. These are the fields Codex reads to determine when a skill should activate. The frontmatter is always present in context.
+- **Markdown body** — Instructions and guidance for using the skill. Only loaded after the skill triggers.
+
+```yaml
+---
+name: gh-address-comments
+description: Help address review/issue comments on the open GitHub PR for the
+  current branch using gh CLI; verify gh auth first and prompt the user to
+  authenticate if not logged in.
+---
+
+# PR Comment Handler
+
+Guide to find the open PR for the current branch and address its comments
+with gh CLI.
+...
+```
+
+### `agents/openai.yaml` (recommended)
+
+UI-facing metadata for skill lists and chips inside Codex. This file is read by the Codex harness, not by the agent itself. It defines how the skill appears in the UI and can declare tool dependencies (e.g., MCP servers).
+
+```yaml
+interface:
+  display_name: "GH Address Comments"
+  short_description: "Address comments in a GitHub PR review"
+  default_prompt: "Use $gh-address-comments to address all open review threads on my PR."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "github"
+      description: "GitHub MCP server"
+      transport: "streamable_http"
+      url: "https://api.githubcopilot.com/mcp/"
+```
+
+See the [openai.yaml reference](/agents-yaml-reference) for all fields and constraints.
+
+### `scripts/` (optional)
+
+Executable code — Python scripts, Bash scripts, or any other executable — for operations that benefit from deterministic reliability. Scripts can be executed by Codex without being loaded into the context window, making them highly token-efficient for repetitive operations.
+
+Include a `scripts/` directory when the same code would otherwise be rewritten from scratch on every run.
+
+### `references/` (optional)
+
+Documentation and reference material intended to be loaded into context on demand. Reference files inform Codex's process and thinking for a specific task — database schemas, API documentation, domain-specific policies, detailed workflow guides.
+
+Reference files are not loaded automatically; Codex reads them when it determines they are needed. This keeps the default context window footprint small.
+
+### `assets/` (optional)
+
+Files used in the output Codex produces — not loaded into context. Assets include templates, boilerplate code directories, images, icons, font files, and sample documents that get copied or modified as part of the skill's workflow.
+
+## Naming Rules
+
+Skill names follow strict conventions to ensure consistent triggering and discoverability:
+
+- **Characters:** Lowercase letters (`a-z`), digits (`0-9`), and hyphens (`-`) only.
+- **Length:** Maximum 64 characters.
+- **Format:** No leading or trailing hyphens; no consecutive hyphens (`--`).
+- **Style:** Prefer short, verb-led phrases: `rotate-pdf`, `address-comments`, `deploy-app`.
+- **Namespacing:** Prefix with the tool name when it improves clarity: `gh-address-comments`, `linear-address-issue`, `vercel-deploy`.
+- **Folder name:** The skill directory must be named exactly after the skill's `name` field in SKILL.md.
+
+Valid names: `gh-address-comments`, `vercel-deploy`, `pdf-editor`, `big-query-helper`
+
+Invalid names: `GH_Address_Comments`, `vercel deploy`, `my--skill`, `-leading-hyphen`
+
+## Real Example: `gh-address-comments`
+
+The `gh-address-comments` curated skill demonstrates a complete, minimal structure:
+
+```
+gh-address-comments/
+├── SKILL.md
+├── agents/
+│   └── openai.yaml
+└── scripts/
+    └── fetch_comments.py
+```
+
+The `SKILL.md` file:
+
+```yaml
+---
+name: gh-address-comments
+description: Help address review/issue comments on the open GitHub PR for the
+  current branch using gh CLI; verify gh auth first and prompt the user to
+  authenticate if not logged in.
+metadata:
+  short-description: Address comments in a GitHub PR review
+---
+
+# PR Comment Handler
+
+Guide to find the open PR for the current branch and address its comments
+with gh CLI. Run all `gh` commands with elevated network access.
+...
+```
+
+<Note>
+  The `metadata:` block in the frontmatter (like `short-description`) is not used by Codex for triggering. Only `name` and `description` determine when a skill activates. Metadata sub-fields exist for other tooling purposes.
+</Note>
+
+## What NOT to Include
+
+A skill should contain only files that an AI agent needs to perform the task. Do not add files that document the development process, explain setup steps, or track changes:
+
+<Warning>
+  Never add these files to a skill directory:
+
+  - `README.md`
+  - `INSTALLATION_GUIDE.md`
+  - `QUICK_REFERENCE.md`
+  - `CHANGELOG.md`
+  - `CONTRIBUTING.md`
+  - Any auxiliary documentation about how the skill was built or tested
+
+  These files add clutter and context noise without helping the agent do its job. They also occupy context-window space unnecessarily if Codex loads the directory.
+</Warning>
+
+The skill directory exists for the AI agent, not for human readers. If you need human-facing documentation, publish it outside the skill directory — in a README at the repository root, for instance.

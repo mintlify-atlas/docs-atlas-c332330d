@@ -1,0 +1,267 @@
+---
+title: "Render Deploy Skill: Deploy Services to Render"
+sidebarTitle: "Render"
+description: "Deploy web services, workers, cron jobs, and databases to Render from Codex using Blueprint IaC files or direct MCP-based service creation."
+---
+
+The Render Deploy skill equips Codex to deploy applications to Render's cloud platform — from single web services to multi-tier architectures with databases, background workers, and cron jobs. Ask Codex to **"deploy my app to Render"**, **"set up a Render deployment"**, or **"create a render.yaml for this project"** and it will analyze your codebase, choose the right deployment method (Blueprint or Direct Creation via MCP), and guide you through every step to a live service URL.
+
+## Trigger Phrases
+
+Codex activates this skill when it detects Render deployment intent. Common phrases include:
+
+- "deploy my app to Render"
+- "create a render.yaml for this project"
+- "set up hosting on Render"
+- "deploy this to Render's cloud"
+- "create a database and web service on Render"
+
+## Installing
+
+```bash
+$skill-installer render-deploy
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## Prerequisites
+
+<Note>
+  Render supports **Git-backed** services and **prebuilt Docker image** services. This skill covers Git-backed deployments. If you have no Git remote, Codex will ask you to push one first (or guide you to the Render Dashboard for image-based deploys).
+</Note>
+
+Before deploying, Codex will verify:
+
+1. **Git remote** — the repo must be pushed to GitHub, GitLab, or Bitbucket.
+2. **MCP tools** — preferred for single-service creation. Codex tests availability with `list_services()`.
+3. **Render CLI** — used for Blueprint validation. Install with `brew install render` (macOS) or the install script for Linux.
+4. **Authentication** — API key (`RENDER_API_KEY`) or `render login` (browser OAuth).
+
+## Choosing a Deployment Method
+
+Codex selects a method automatically based on your project structure:
+
+| Method | Best For |
+|--------|----------|
+| **Blueprint** (`render.yaml`) | Multi-service apps, databases, workers, cron jobs, IaC workflows |
+| **Direct Creation (MCP)** | Single web service or static site, quick prototypes |
+
+<Tip>
+  When in doubt, Codex defaults to **Blueprint** for safety and reproducibility. For a simple single service with no database, it strongly prefers **Direct Creation via MCP**.
+</Tip>
+
+## Method 1: Blueprint Deployment
+
+Blueprints define your entire infrastructure as a `render.yaml` file committed to your repository.
+
+<Steps>
+  <Step title="Analyze the Codebase">
+    Codex scans your project for framework/runtime, build and start commands, required environment variables, datastores, and port binding patterns.
+  </Step>
+
+  <Step title="Generate render.yaml">
+    Codex writes a `render.yaml` Blueprint. A minimal example:
+
+    ```yaml
+    services:
+      - type: web
+        name: my-app
+        runtime: node
+        plan: free
+        buildCommand: npm ci
+        startCommand: npm start
+        envVars:
+          - key: DATABASE_URL
+            fromDatabase:
+              name: postgres
+              property: connectionString
+          - key: JWT_SECRET
+            sync: false  # User fills this in the Dashboard
+
+    databases:
+      - name: postgres
+        databaseName: myapp_db
+        plan: free
+    ```
+
+    <Note>
+      Codex always uses `plan: free` unless you specify otherwise. Secrets are marked `sync: false` so they are never hardcoded — you fill them in via the Render Dashboard.
+    </Note>
+  </Step>
+
+  <Step title="Validate the Blueprint">
+    Codex validates the generated file before any deployment:
+
+    ```bash
+    render whoami -o json
+    render blueprints validate
+    ```
+
+    Common validation errors include missing required fields, invalid runtime values, or malformed YAML.
+  </Step>
+
+  <Step title="Commit and Push">
+    The `render.yaml` must be in your repository before the Dashboard can read it:
+
+    ```bash
+    git add render.yaml
+    git commit -m "Add Render deployment configuration"
+    git push origin main
+    ```
+  </Step>
+
+  <Step title="Open the Dashboard Deeplink">
+    Codex generates a direct link to the Blueprint deployment wizard:
+
+    ```
+    https://dashboard.render.com/blueprint/new?repo=https://github.com/username/repo-name
+    ```
+
+    In the Dashboard: complete Git OAuth if prompted, name the Blueprint, fill in secrets (`sync: false` vars), review services and databases, then click **Apply**.
+  </Step>
+
+  <Step title="Verify the Deployment">
+    Codex checks deploy status via MCP after you click Apply:
+
+    ```
+    list_deploys(serviceId: "<service-id>", limit: 1)
+    list_logs(resource: ["<service-id>"], level: ["error"], limit: 20)
+    ```
+
+    Look for `status: "live"` to confirm a successful deployment.
+  </Step>
+</Steps>
+
+## Method 2: Direct Creation via MCP
+
+For simple single-service deployments, Codex creates resources directly through the Render MCP server — no `render.yaml` required.
+
+### Setting Up MCP (Codex)
+
+If MCP isn't configured yet, Codex will walk you through this one-time setup:
+
+```bash
+# 1. Get your API key from:
+#    https://dashboard.render.com/u/*/settings#api-keys
+
+# 2. Set it in your shell
+export RENDER_API_KEY="<YOUR_API_KEY>"
+
+# 3. Add the MCP server
+codex mcp add render --url https://mcp.render.com/mcp --bearer-token-env-var RENDER_API_KEY
+```
+
+Then restart Codex and set your active workspace:
+
+```
+Set my Render workspace to [WORKSPACE_NAME]
+```
+
+### Direct Creation Flow
+
+1. Codex analyzes your codebase for runtime, build/start commands, and env vars.
+2. Creates the service (web or static) and any needed databases or key-value stores via MCP.
+3. Adds required environment variables after service creation.
+4. Checks deploy status, logs, and health metrics.
+
+## Service Types
+
+Render supports five service types, and Codex picks the right one automatically:
+
+<CardGroup cols={2}>
+  <Card title="Web (`type: web`)" icon="globe">
+    HTTP servers, APIs, full-stack apps (Next.js, Django, Rails). Publicly accessible via HTTPS. Must bind to `0.0.0.0:$PORT`.
+  </Card>
+  <Card title="Worker (`type: worker`)" icon="gear">
+    Background job processors and queue consumers (Celery, BullMQ, Sidekiq). No public URL or port binding required.
+  </Card>
+  <Card title="Cron (`type: cron`)" icon="clock">
+    Scheduled tasks that run on a cron schedule, complete, then shut down. Uses standard cron syntax in UTC.
+  </Card>
+  <Card title="Static (`runtime: static`)" icon="file">
+    SPAs and static sites served via CDN. Set `staticPublishPath` to your build output directory (`./dist`, `./build`, etc.).
+  </Card>
+  <Card title="Private (`type: pserv`)" icon="lock">
+    Internal-only services accessible via `.render-internal.com` — microservices, database proxies, admin tools.
+  </Card>
+</CardGroup>
+
+## Supported Runtimes
+
+Codex uses your codebase to detect the right runtime automatically:
+
+| Runtime | Key | Supported Versions |
+|---------|-----|--------------------|
+| Node.js | `node` | 14, 16, 18, 20, 21 |
+| Python | `python` | 3.8 – 3.12 |
+| Go | `go` | 1.20 – 1.23 |
+| Ruby | `ruby` | 3.0 – 3.3 |
+| Rust | `rust` | Latest stable |
+| Elixir | `elixir` | Latest stable |
+| Docker | `docker` | Any (via Dockerfile) |
+| Pre-built image | `image` | Any (registry URL) |
+| Static files | `static` | N/A |
+
+## Blueprint Spec Highlights
+
+Key fields Codex uses when generating `render.yaml`:
+
+```yaml
+services:
+  - type: web | worker | cron | pserv
+    name: string               # Unique service name
+    runtime: node | python | go | ruby | rust | elixir | docker | image | static
+    plan: free                 # Default; free tier available
+    region: oregon             # oregon, ohio, virginia, frankfurt, singapore
+    buildCommand: string       # e.g., "npm ci && npm run build"
+    startCommand: string       # e.g., "npm start"
+    branch: main               # Git branch to deploy
+    autoDeploy: true           # Auto-deploy on push
+    healthCheckPath: /health   # Health check endpoint
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SECRET
+        sync: false            # User-provided in Dashboard
+      - key: DATABASE_URL
+        fromDatabase:
+          name: postgres
+          property: connectionString
+
+databases:
+  - name: postgres             # PostgreSQL
+    databaseName: myapp_db
+    plan: free
+  - name: redis                # Redis / Key Value
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+```
+
+## Escalated Network Access
+
+If the deploy fails due to network issues (timeouts, DNS errors, connection resets), Codex will prompt before retrying:
+
+```
+The deploy needs escalated network access to deploy to Render.
+I can rerun the command with escalated permissions — want me to proceed?
+```
+
+## Post-Deploy Verification
+
+After every deployment, Codex runs a quick health check:
+
+1. Confirms the latest deploy shows `status: "live"`
+2. Hits the health endpoint (or root) and verifies a 200 response
+3. Scans recent error logs for failure signatures
+4. Verifies required env vars and port binding (`0.0.0.0:$PORT`)
+
+<Tip>
+  If the service fails to start or health checks time out, Codex can install the `render-debug` skill for deeper diagnostics — metrics, database checks, and an error catalog.
+</Tip>
+
+## Reference
+
+- [Render Blueprint Spec](https://render.com/docs/blueprint-spec)
+- [Render CLI Docs](https://render.com/docs/cli)
+- [Environment Variables Guide](https://render.com/docs/environment-variables)
+- [Render MCP Server](https://mcp.render.com/mcp)

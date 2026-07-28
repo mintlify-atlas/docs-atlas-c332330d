@@ -1,0 +1,208 @@
+---
+title: "CLI Creator Skill: Build Agent Command-Line Tools"
+sidebarTitle: "CLI Creator"
+description: "Build durable, composable CLIs from API docs, OpenAPI specs, SDKs, or curl examples that Codex can run from any repo, with stable JSON output."
+---
+
+The **cli-creator** skill builds real, installable command-line tools that any future Codex thread can run by name from any working directory. It is designed for durable tools — not one-off scripts — that expose composable read/write commands, return stable JSON, manage authentication cleanly, and pair with a companion skill so Codex knows how to use them. Sources can include API documentation, OpenAPI specs, existing curl examples, SDKs, web apps, admin tools, or local scripts.
+
+## What CLI Creator Enables
+
+<CardGroup cols={2}>
+  <Card title="Composable commands" icon="puzzle-piece">
+    Discover, resolve, read, write, and raw-escape-hatch commands that chain together naturally from any repo.
+  </Card>
+  <Card title="Stable JSON output" icon="brackets-curly">
+    Every command supports `--json` so Codex can parse results, pipe them to the next step, or use them in automation.
+  </Card>
+  <Card title="Auth management" icon="key">
+    Supports env variables, config files, and explicit flags in a documented precedence order — no leaked tokens.
+  </Card>
+  <Card title="Companion skill" icon="book">
+    After the CLI works, the skill creates or updates a companion skill that teaches future Codex threads when and how to use the new tool.
+  </Card>
+</CardGroup>
+
+## Trigger Conditions
+
+Codex activates this skill when you ask it to:
+
+- Build a CLI for an API, service, or web app you work with regularly
+- Turn existing curl examples or shell history into a stable, composable tool
+- Create a command-line wrapper around an OpenAPI spec or SDK
+- Package an internal script as an installable binary Codex can call from any repo
+
+<Note>
+  CLI Creator is for durable tools. If a short script in the current repo solves your task, write the script there instead.
+</Note>
+
+## Start: What to Specify
+
+Name the target tool, its source, and the first real jobs it should do before Codex starts scaffolding:
+
+- **Source**: API docs, OpenAPI JSON, SDK docs, curl examples, browser app, existing internal script, or shell history
+- **Jobs**: literal reads/writes such as `list drafts`, `download failed job logs`, `search messages`, `upload media`, `read queue schedule`
+- **Install name**: a short binary name such as `ci-logs`, `slack-cli`, or `buildkite-logs`
+
+Codex checks whether the proposed command name already exists before scaffolding:
+
+```bash
+command -v <tool-name> || true
+```
+
+If it already exists, it picks a clearer name or asks you.
+
+## Choosing a Runtime
+
+Codex inspects your machine first:
+
+```bash
+command -v cargo rustc node pnpm npm python3 uv || true
+```
+
+Then picks the least surprising toolchain:
+
+| Runtime | When to choose |
+|---|---|
+| **Rust** (default) | Durable CLIs Codex will run from any repo — one fast binary, strong arg parsing, easy install into `~/.local/bin` |
+| **TypeScript/Node** | When the official SDK, auth helper, or browser automation library makes the CLI materially better |
+| **Python** | Data science, local file transforms, notebooks, SQLite/CSV/JSON analysis, or Python-heavy admin tooling |
+
+Codex states the choice and reason in one sentence before scaffolding, including the installed toolchain it found.
+
+## Command Contract (Agent-CLI Patterns)
+
+Before writing any code, Codex sketches the full command surface in chat. Every CLI built with this skill follows a consistent shape:
+
+```bash
+# Health and config verification
+tool-name --json doctor
+
+# Discovery: find top-level containers
+tool-name --json accounts list
+tool-name --json projects list
+tool-name --json channels list
+
+# Resolve: turn names/URLs/slugs into stable IDs
+tool-name --json channels resolve --name codex
+
+# Read: fetch exact objects and paginated lists
+tool-name --json messages search "exact phrase" --limit 10
+tool-name --json messages context <message-id> --before 3 --after 3
+
+# Write: one named action each, with dry-run where possible
+tool-name --json drafts create --body-file draft.json
+tool-name --json media upload --file ./image.png
+
+# Raw escape hatch for repair
+tool-name --json request get /v2/me
+```
+
+Key rules from the agent-cli patterns reference:
+
+- **`--help` is interface**: write it for a future Codex thread that only has the binary and a vague task.
+- **`doctor --json`** verifies config, auth, version, endpoint reachability, and missing setup. It must be usable even when auth is missing — reporting what's absent rather than crashing.
+- **`--json` everywhere Codex will parse output**: emit JSON to stdout only; send progress and diagnostics to stderr; redact tokens and secrets.
+- **Write commands do one thing**: use the narrowest stable resource ID, support `--dry-run` or `draft` first when the service allows it, and never hide writes inside broad commands like `fix` or `auto`.
+- **Pagination is explicit**: start shallow by default; provide `--limit`, cursor, or offset knobs with clearly documented defaults.
+- **Exit codes are meaningful**: exit zero on success (including empty results); exit non-zero for auth failure, invalid input, network failure, API error, or incomplete upload/download.
+
+## Authentication Design
+
+Supported in this precedence order:
+
+1. **Environment variable** using the service's standard name (e.g., `GITHUB_TOKEN`)
+2. **User config file** under `~/.<tool-name>/config.toml` or another simple documented path
+3. **`--api-key` flag** only for explicit one-off tests — env/config is preferred for normal use to avoid leaking tokens into shell history
+
+`doctor --json` always reports:
+- Whether a token is available
+- The auth source category (`flag`, `env`, `config`, provider default, or `missing`)
+- What setup step is missing
+- Whether offline/fixture mode is active and whether auth is required
+
+Never print full tokens. Never commit cookies, bearer tokens, customer secrets, or full production payloads.
+
+## Build Workflow
+
+<Steps>
+  <Step title="Read the source">
+    Inventory resources, auth, pagination, IDs, media flows, rate limits, and dangerous write actions. If OpenAPI is available, download and inspect it before naming commands.
+  </Step>
+  <Step title="Sketch the command list">
+    Present the full command surface in chat. Keep names short and shell-friendly.
+  </Step>
+  <Step title="Scaffold with README">
+    Generate the project structure, `Makefile`, README, and initial source files.
+  </Step>
+  <Step title="Implement core commands">
+    Build `doctor`, discovery, resolve, and read commands first. Add one narrow draft or dry-run write path if requested. Add the raw escape hatch.
+  </Step>
+  <Step title="Install on PATH">
+    The CLI must be callable by name outside the source folder. For Rust, a typical `Makefile` target:
+
+    ```bash
+    make install-local
+    # builds release binary and copies to ~/.local/bin
+    ```
+
+    For TypeScript/Node:
+
+    ```bash
+    pnpm install && pnpm build && pnpm link --global
+    ```
+
+    For Python:
+
+    ```bash
+    make install-local
+    # installs via pyproject.toml console_scripts or a wrapper in ~/.local/bin
+    ```
+  </Step>
+  <Step title="Smoke-test from outside the source folder">
+    Always test from another repo or `/tmp` — not from inside the source folder — to catch binaries that only work with `cargo run` or package-manager wrappers:
+
+    ```bash
+    command -v <tool-name>
+    <tool-name> --help
+    <tool-name> --json doctor
+    ```
+  </Step>
+  <Step title="Run tests and checks">
+    Format, typecheck or build, unit tests for request builders and pagination, no-auth `doctor`, help output, and at least one fixture or live read-only API call.
+  </Step>
+  <Step title="Create a companion skill">
+    After the CLI works, create or update a companion skill at `$CODEX_HOME/skills/<tool-name>/SKILL.md`. The companion skill teaches future Codex threads the order of commands to run — not a tour of every feature.
+  </Step>
+</Steps>
+
+## Examples of CLIs This Skill Can Build
+
+<CardGroup cols={2}>
+  <Card title="CI log downloader" icon="download">
+    `ci-logs` — fetch GitHub Actions run logs for failing jobs, extract snippets by error pattern, return structured JSON with file paths and line numbers.
+  </Card>
+  <Card title="Slack workspace CLI" icon="message">
+    `slack-cli` — list channels, resolve channel names to IDs, search messages, fetch thread context, and draft replies with `--dry-run` protection.
+  </Card>
+  <Card title="Sentry error CLI" icon="bug">
+    `sentry-cli` — list projects, resolve issue IDs from URLs, fetch event details and stack traces, assign or comment on issues.
+  </Card>
+  <Card title="Internal API wrapper" icon="server">
+    A custom CLI from curl examples and DevTools network captures — sanitized endpoint notes, auth from env, composable read commands, raw `request get` escape hatch.
+  </Card>
+</CardGroup>
+
+## Default Prompt
+
+When launched from the Codex skill menu, this skill starts with:
+
+> "Create a composable CLI from this source material, install it on PATH, test it from outside the source folder, and create a companion skill that teaches Codex when to use it."
+
+## Installing
+
+```bash
+$skill-installer cli-creator
+```
+
+Restart Codex after installation to pick up the new skill.

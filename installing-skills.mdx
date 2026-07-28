@@ -1,0 +1,222 @@
+---
+title: "Installing and Managing Skills in Codex: Full Guide"
+sidebarTitle: "Installing Skills"
+description: "All methods for installing curated, experimental, and custom skills — including GitHub URL, private repo support, and full CLI reference."
+---
+
+The `skill-installer` system skill is your one-stop interface for discovering and installing skills into Codex. It is pre-installed in every Codex environment and backed by two Python helper scripts that handle everything from listing available skills to fetching and placing skill directories on disk. This page covers every installation method in detail.
+
+## How Skill Installer Works
+
+When you invoke `$skill-installer` in Codex, the system skill activates and uses these two scripts:
+
+- **`scripts/list-skills.py`** — Lists skills from a GitHub repo path and annotates which ones are already installed locally.
+- **`scripts/install-skill-from-github.py`** — Downloads a skill directory from GitHub and installs it into `$CODEX_HOME/skills/`.
+
+By default, the curated skill listing points to `https://github.com/openai/skills/tree/main/skills/.curated`. The install destination is `$CODEX_HOME/skills/<skill-name>`, which defaults to `~/.codex/skills/<skill-name>` when `CODEX_HOME` is not set.
+
+<Note>
+  System skills (including `skill-installer` and `skill-creator`) are pre-installed and cannot — and need not — be re-installed. If a user asks to install a system skill, simply explain that it is already available.
+</Note>
+
+## Installation Methods
+
+### Method 1: By Name (Curated Skills)
+
+The simplest installation path. Provide the skill name and the installer fetches it from `skills/.curated`:
+
+```
+$skill-installer gh-address-comments
+```
+
+Codex internally runs:
+
+```bash
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.curated/gh-address-comments
+```
+
+### Method 2: By Folder (Experimental Skills)
+
+For experimental skills, specify the `.experimental` folder explicitly:
+
+```
+$skill-installer install the create-plan skill from the .experimental folder
+```
+
+This translates to:
+
+```bash
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.experimental/create-plan
+```
+
+### Method 3: By Full GitHub URL
+
+Provide any GitHub directory URL directly — useful for skills in forks, private repos, or branches:
+
+```
+$skill-installer install https://github.com/openai/skills/tree/main/skills/.experimental/create-plan
+```
+
+Internally this calls:
+
+```bash
+scripts/install-skill-from-github.py \
+  --url https://github.com/openai/skills/tree/main/skills/.experimental/create-plan
+```
+
+## CLI Reference: `install-skill-from-github.py`
+
+The install script supports several flags for advanced use cases.
+
+```bash
+scripts/install-skill-from-github.py \
+  --repo <owner>/<repo> \
+  --path <path/to/skill> [<path/to/skill> ...] \
+  [--url <github-url>] \
+  [--ref <branch-or-tag>] \
+  [--dest <destination-dir>] \
+  [--name <skill-name>] \
+  [--method auto|download|git]
+```
+
+<ParamField path="--repo" type="string">
+  Repository in `owner/repo` format. Required unless `--url` is provided.
+</ParamField>
+
+<ParamField path="--path" type="string[]">
+  One or more relative paths to skill directories inside the repo. Multiple paths install multiple skills in a single run, each named from its path basename.
+</ParamField>
+
+<ParamField path="--url" type="string">
+  Full GitHub URL to a skill directory, e.g. `https://github.com/owner/repo/tree/main/path/to/skill`. When provided, `--repo` is optional.
+</ParamField>
+
+<ParamField path="--ref" type="string" default="main">
+  Git branch, tag, or commit SHA to install from. Defaults to `main`.
+</ParamField>
+
+<ParamField path="--dest" type="string">
+  Destination directory for the installed skill. Defaults to `$CODEX_HOME/skills` (which resolves to `~/.codex/skills`).
+</ParamField>
+
+<ParamField path="--name" type="string">
+  Override the skill folder name at the destination. Only valid when installing a single skill. Defaults to the basename of the `--path` value.
+</ParamField>
+
+<ParamField path="--method" type="string" default="auto">
+  Download strategy. `auto` tries direct download first, falls back to git sparse checkout on auth/permission errors. `download` forces direct download only. `git` forces git sparse checkout only (tries HTTPS, then SSH).
+</ParamField>
+
+**Examples:**
+
+```bash
+# Install a curated skill
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.curated/gh-address-comments
+
+# Install an experimental skill at a specific branch
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.experimental/create-plan \
+  --ref develop
+
+# Install multiple skills in one run
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.curated/gh-address-comments skills/.curated/vercel-deploy
+
+# Install from a full URL
+scripts/install-skill-from-github.py \
+  --url https://github.com/openai/skills/tree/main/skills/.experimental/create-plan
+
+# Install to a custom destination
+scripts/install-skill-from-github.py \
+  --repo openai/skills \
+  --path skills/.curated/gh-address-comments \
+  --dest /workspace/my-skills
+```
+
+## CLI Reference: `list-skills.py`
+
+```bash
+scripts/list-skills.py \
+  [--repo <owner>/<repo>] \
+  [--path <repo-path>] \
+  [--ref <branch>] \
+  [--format text|json]
+```
+
+<ParamField path="--repo" type="string" default="openai/skills">
+  Repository to list skills from.
+</ParamField>
+
+<ParamField path="--path" type="string" default="skills/.curated">
+  Path within the repository to list. Use `skills/.experimental` for experimental skills.
+</ParamField>
+
+<ParamField path="--ref" type="string" default="main">
+  Branch or tag to list from.
+</ParamField>
+
+<ParamField path="--format" type="string" default="text">
+  Output format. `text` prints a numbered list with `(already installed)` annotations. `json` returns an array of `{"name": string, "installed": boolean}` objects.
+</ParamField>
+
+**Examples:**
+
+```bash
+# List curated skills (default)
+scripts/list-skills.py
+
+# List experimental skills
+scripts/list-skills.py --path skills/.experimental
+
+# Output as JSON
+scripts/list-skills.py --format json
+
+# List skills from another repo
+scripts/list-skills.py --repo myorg/my-skills --path skills
+```
+
+## Install Destination
+
+Skills are always installed to `$CODEX_HOME/skills/<skill-name>`. If `CODEX_HOME` is not set, it defaults to `~/.codex`. The installer aborts if the destination directory already exists — it will not overwrite an existing skill.
+
+```
+~/.codex/
+└── skills/
+    ├── gh-address-comments/
+    │   ├── SKILL.md
+    │   ├── agents/
+    │   │   └── openai.yaml
+    │   └── scripts/
+    └── vercel-deploy/
+        ├── SKILL.md
+        └── scripts/
+```
+
+## Private Repository Support
+
+The install script supports private GitHub repositories through existing git credentials or environment variables:
+
+```bash
+# Using a personal access token
+GITHUB_TOKEN=ghp_... scripts/install-skill-from-github.py \
+  --repo myorg/private-skills \
+  --path skills/my-internal-skill
+```
+
+Either `GITHUB_TOKEN` or `GH_TOKEN` is accepted. When direct download fails due to auth errors (HTTP 401, 403, or 404), the script automatically falls back to git sparse checkout, which tries HTTPS first and then SSH.
+
+## After Installing
+
+After installing any skill, **restart Codex** to pick up the new skill's metadata. Skills are discovered at startup — a restart is required before a newly installed skill becomes active.
+
+<Tip>
+  After a restart, the skill is available immediately on your next turn. You can verify by asking Codex to list active skills, or simply use a prompt that would trigger the skill.
+</Tip>

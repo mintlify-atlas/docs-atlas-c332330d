@@ -1,0 +1,205 @@
+---
+title: "Progressive Disclosure: Managing Context Efficiently"
+sidebarTitle: "Progressive Disclosure"
+description: "How skills use a three-level loading system to share Codex's context window efficiently across metadata, body, and bundled resources."
+---
+
+Every installed skill competes for space in Codex's context window — a finite resource shared with the system prompt, conversation history, the active user request, and all other skills' metadata. Progressive disclosure is the design pattern that keeps this shared space manageable: load only what is needed, only when it is needed, at the minimum level of detail required.
+
+## Why Context Efficiency Matters
+
+Codex's context window is a public good. When a skill loads unnecessary content — verbose explanations Codex already knows, full documentation when only one section is relevant, duplicated information that lives in two places — it crowds out everything else. The cost compounds: each additional installed skill adds to the baseline context load, even before any task begins.
+
+The operating principle is: **Codex is already very smart.** Do not add context it already has. Every token in a skill should be justified by asking, "Does Codex genuinely need this, or would it handle this correctly without it?"
+
+## The Three Levels
+
+Skills use a structured, three-level loading hierarchy:
+
+| Level | Content | When loaded | Approximate size |
+|---|---|---|---|
+| **1. Metadata** | `name` + `description` from SKILL.md frontmatter | Always in context | ~100 words |
+| **2. SKILL.md body** | Full instruction document | After skill triggers | < 5,000 words |
+| **3. Bundled resources** | Scripts, references, assets | On demand by Codex | Unlimited |
+
+### Level 1: Metadata (Always in Context)
+
+The `name` and `description` fields from SKILL.md frontmatter are present in every Codex turn for every installed skill. This is how Codex decides which skills are relevant to a given request — it scans all installed skill descriptions before responding.
+
+This is why the description field deserves the most careful attention. It must convey both what the skill does and when to use it, in roughly 100 words or fewer. Every installed skill's description is permanently occupying context space — make it count.
+
+### Level 2: SKILL.md Body (On Trigger)
+
+The full SKILL.md body is loaded into context only after Codex determines the skill is relevant. This is the main instruction set: workflow steps, decision trees, commands, and pointers to bundled resources.
+
+Keep the body under 500 lines. Approaching this limit is a signal to move content into reference files. The body should contain only what Codex needs to orient itself and begin working — not exhaustive documentation of every edge case.
+
+### Level 3: Bundled Resources (On Demand)
+
+Reference files, scripts, and assets are loaded or executed only when Codex determines they are needed for the specific task at hand. This level is effectively unlimited in size — scripts can be executed without reading their full source into context, and reference files are loaded section by section as needed.
+
+This is where the bulk of domain-specific knowledge should live: database schemas, API documentation, boilerplate templates, company policies. Large volumes of knowledge can be made available to Codex without permanently consuming context space.
+
+## The Three Progressive Disclosure Patterns
+
+### Pattern 1: High-Level Guide with References
+
+Keep SKILL.md lean and pointer-heavy. The body orients Codex and points to reference files for details.
+
+```markdown
+# PDF Processing
+
+## Quick Start
+
+Extract text with pdfplumber:
+
+\`\`\`python
+import pdfplumber
+with pdfplumber.open("file.pdf") as pdf:
+    text = pdf.pages[0].extract_text()
+\`\`\`
+
+## Advanced Features
+
+- **Form filling**: See `references/forms.md` for the complete guide
+- **API reference**: See `references/reference.md` for all methods
+- **Common patterns**: See `references/examples.md` for worked examples
+```
+
+Codex loads `references/forms.md` only when the user needs form filling — not on every PDF task.
+
+### Pattern 2: Domain-Specific Organization
+
+For skills that span multiple domains, frameworks, or environments, split reference content by domain so Codex loads only the relevant subset.
+
+**By data domain:**
+
+```
+bigquery-skill/
+├── SKILL.md                     ← overview + "read sales.md for sales queries"
+└── references/
+    ├── finance.md               ← loaded for billing/revenue tasks
+    ├── sales.md                 ← loaded for pipeline/opportunity tasks
+    ├── product.md               ← loaded for API usage/feature tasks
+    └── marketing.md             ← loaded for campaign/attribution tasks
+```
+
+**By deployment target:**
+
+```
+cloud-deploy-skill/
+├── SKILL.md                     ← workflow + "read aws.md for AWS deploys"
+└── references/
+    ├── aws.md                   ← loaded for AWS deployments
+    ├── gcp.md                   ← loaded for GCP deployments
+    └── azure.md                 ← loaded for Azure deployments
+```
+
+When a user asks about sales pipeline metrics, Codex reads only `sales.md` — not the finance, product, or marketing files.
+
+### Pattern 3: Conditional Details
+
+Provide the essential workflow in SKILL.md and link to advanced content that is only needed in specific situations.
+
+```markdown
+# DOCX Processing
+
+## Creating Documents
+
+Use docx-js for new documents. See `references/docx-js.md`.
+
+## Editing Documents
+
+For simple edits, modify the XML directly.
+
+**For tracked changes**: See `references/redlining.md`
+**For OOXML details**: See `references/ooxml.md`
+```
+
+Codex reads `references/redlining.md` only when the user's task involves tracked changes — not for every document operation.
+
+## Key Guidelines
+
+**Avoid deeply nested references.** Keep all reference files one level deep from SKILL.md. Do not create references that link to other references. All reference files should be discoverable directly from SKILL.md.
+
+**Structure long reference files.** For any reference file longer than 100 lines, add a table of contents at the top. This allows Codex to preview the full scope without reading the entire file.
+
+**Reference explicitly.** Every reference file must be mentioned in SKILL.md with a clear statement of when Codex should load it. An unreferenced file may never be used.
+
+```markdown
+For table schemas and column definitions, read `references/schema.md`
+before writing any queries.
+```
+
+## Concrete Comparison
+
+**Bloated SKILL.md (anti-pattern):**
+
+```markdown
+---
+name: big-query
+description: Query BigQuery databases.
+---
+
+# BigQuery
+
+## Users Table
+- id: INT64, primary key
+- email: STRING, user email address
+- created_at: TIMESTAMP, account creation time
+- plan: STRING, subscription tier
+
+## Events Table
+- id: INT64
+- user_id: INT64, foreign key to users.id
+- event_type: STRING
+- timestamp: TIMESTAMP
+- properties: JSON
+
+## Revenue Table
+- id: INT64
+- user_id: INT64
+- amount: FLOAT64
+- currency: STRING
+- charged_at: TIMESTAMP
+[...200 more lines of schema...]
+```
+
+Every turn on a BigQuery task now loads the full schema, whether relevant or not.
+
+**Progressive disclosure (correct pattern):**
+
+```markdown
+---
+name: big-query
+description: Query the company BigQuery data warehouse. Use when the user asks
+  about user counts, revenue metrics, events, or any data analysis task requiring
+  BigQuery.
+---
+
+# BigQuery
+
+Query the data warehouse using the helper scripts.
+
+## Schemas
+
+Before writing queries, read the relevant schema file:
+
+- **User and auth data**: `references/users.md`
+- **Revenue and billing**: `references/revenue.md`
+- **Product events**: `references/events.md`
+```
+
+Now the schema is available but only loaded when relevant — keeping the baseline context footprint to a few lines.
+
+## Anti-Patterns to Avoid
+
+<Warning>
+  These patterns degrade context efficiency and should be avoided:
+
+  - **Verbose Codex-already-knows explanations** — Explaining what `git commit` does, how Python imports work, or what JSON is wastes tokens on things Codex handles correctly without instruction.
+  - **Duplicated content** — The same schema appearing in both SKILL.md and `references/schema.md` doubles the token cost every time both are loaded.
+  - **"When to Use This Skill" sections in the body** — The body is only loaded after the skill triggers. Move all trigger guidance to the frontmatter `description`.
+  - **Loading everything upfront** — Describing all reference files in detail in SKILL.md, rather than letting Codex request them as needed, defeats the purpose of the three-level system.
+  - **Monolithic reference files** — A single 5,000-line reference file with no table of contents forces Codex to scan everything to find the relevant section.
+</Warning>

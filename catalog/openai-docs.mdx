@@ -1,0 +1,166 @@
+---
+title: "OpenAI Docs Skill: API Reference in Context"
+sidebarTitle: "OpenAI Docs"
+description: "Brings live OpenAI developer docs, latest model info, and prompt-upgrade guidance into every Codex session via the developers.openai.com MCP server."
+---
+
+The OpenAI Docs skill gives Codex authoritative, always-current access to the OpenAI developer documentation without leaving your coding session. It powers three distinct workflows: general API and SDK docs lookup (with page-level citations), model selection and migration guidance (fetching the live latest-model page before answering), and Codex self-knowledge synthesis (pulling the current Codex manual and generating a navigable outline). When the live MCP server is reachable, Codex reads the actual published docs; bundled reference files serve as a fallback when network access is unavailable.
+
+<Note>
+  The OpenAI Docs skill is a **system skill** — it is pre-installed in every Codex environment and cannot be removed by users.
+</Note>
+
+## What this skill provides
+
+<CardGroup cols={2}>
+  <Card title="Live docs via MCP" icon="book-open">
+    Searches and fetches pages from `developers.openai.com` using the `openaiDeveloperDocs` MCP server — search, fetch, and OpenAPI spec tools included.
+  </Card>
+  <Card title="Latest model guidance" icon="microchip">
+    Fetches `https://developers.openai.com/api/docs/guides/latest-model.md` to give up-to-date model IDs, use-case recommendations, and migration links.
+  </Card>
+  <Card title="Codex self-knowledge" icon="compass">
+    Fetches and caches the full Codex manual, generates a section outline, and answers questions about skills, plugins, MCP, hooks, automations, and surface selection.
+  </Card>
+  <Card title="Prompt upgrade guidance" icon="wand-magic-sparkles">
+    Provides prompt-rewrite guidance for newer models, covering outcome-first prompting, stopping conditions, personality blocks, and formatting.
+  </Card>
+</CardGroup>
+
+## Default prompt
+
+When this skill activates, Codex uses the following operating instruction:
+
+> *Use OpenAI Docs for official docs lookup, questions about Codex itself or Codex surfaces, model selection, model migration, and prompt-upgrade work.*
+
+## When it triggers
+
+This skill activates when you:
+
+- Ask how to build with an OpenAI API or SDK
+- Ask about Codex itself — configuration, surfaces, skills, plugins, MCP, hooks, or automations
+- Need to choose the right model for a use case
+- Want to migrate from an older model string to the current default
+- Need a prompt rewritten for a newer model's behavior
+- Ask for citations or links to official OpenAI documentation
+
+<Tip>
+  For questions about building API-backed apps that need credentials, the skill defers to `openai-platform-api-key` first, then returns here for the docs portion of your question.
+</Tip>
+
+## Resources and when each is loaded
+
+| Resource | When loaded |
+|---|---|
+| `mcp__openaiDeveloperDocs__search_openai_docs` | First call for any non-Codex docs question |
+| `mcp__openaiDeveloperDocs__fetch_openai_doc` | After search, to read the best matching page |
+| `mcp__openaiDeveloperDocs__get_openapi_spec` | API parameter, schema, or required-field questions |
+| `https://developers.openai.com/api/docs/guides/latest-model.md` | Any "latest/best/current model" question |
+| `scripts/fetch-codex-manual.mjs` | Broad Codex self-knowledge questions (runs first) |
+| `references/latest-model.md` | Fallback when the live latest-model page is unreachable |
+| `references/prompting-guide.md` | Fallback for prompt-rewrite work when remote guides fail |
+
+## Source priority rules
+
+<Steps>
+  <Step title="Codex self-knowledge path">
+    For questions about Codex itself, run `scripts/fetch-codex-manual.mjs` first to get a fresh, cached copy of the Codex manual and its section outline. Use the outline to target the right section, then answer from it.
+  </Step>
+  <Step title="Non-Codex docs path">
+    For all other OpenAI docs questions, call `mcp__openaiDeveloperDocs__search_openai_docs`, then fetch the most relevant page with `mcp__openaiDeveloperDocs__fetch_openai_doc`.
+  </Step>
+  <Step title="Model selection path">
+    Fetch `https://developers.openai.com/api/docs/guides/latest-model.md` live. If unavailable, fall back to the bundled `references/latest-model.md` and disclose the fallback.
+  </Step>
+  <Step title="Official web fallback">
+    Used only after MCP tools return no meaningful results. Restricted to `developers.openai.com` and `platform.openai.com`.
+  </Step>
+</Steps>
+
+## Latest model reference
+
+The bundled `references/latest-model.md` lists recommended model IDs by use case. **Always verify against live docs before repeating any of these to a user.**
+
+| Model ID | Best for |
+|---|---|
+| `gpt-5.5` | Latest default text and reasoning; most new apps |
+| `gpt-5.5-pro` | Maximum reasoning quality when latency matters less |
+| `gpt-5.3-codex` | Agentic coding, code editing, tool-heavy coding |
+| `gpt-5.1-codex-mini` | Cost-optimized coding workflows |
+| `gpt-image-1.5` | Best image generation and editing quality |
+| `gpt-image-1-mini` | Cost-optimized image generation |
+| `gpt-4o-mini-tts` | Text-to-speech |
+| `gpt-4o-mini-transcribe` | Fast, cost-efficient speech-to-text |
+| `gpt-realtime-1.5` | Realtime voice and multimodal sessions |
+| `text-embedding-3-large` | Higher-quality retrieval embeddings |
+
+## Prompting best practices (GPT-5.5)
+
+The bundled `references/prompting-guide.md` covers prompt patterns for the current generation of models. Key takeaways:
+
+- **Outcome-first prompts**: Describe the target outcome, success criteria, and constraints — let the model choose the path.
+- **Shorter is often better**: Newer models need less step-by-step process narration; over-specified prompts can narrow the search space.
+- **Add stopping conditions**: Tell the model when enough evidence is enough, and what to do when evidence is missing.
+- **Personality blocks**: For conversational products, define both personality (tone, warmth) and collaboration style (when to ask questions, how proactive to be) separately.
+- **Reserve `ALWAYS`/`NEVER`**: Use absolute rules only for true invariants (safety, required fields). Use decision rules for judgment calls.
+
+Example personality block for a task-focused assistant:
+
+```text
+# Personality
+You are a capable collaborator: approachable, steady, and direct. Assume the user
+is competent and acting in good faith. Prefer making progress over stopping for
+clarification when the request is already clear enough to attempt.
+```
+
+Example stopping condition:
+
+```text
+Resolve the user query in the fewest useful tool loops, but do not let loop
+minimization outrank correctness. After each result, ask: "Can I answer the
+user's core request now?" If yes, answer.
+```
+
+## Model upgrade rules
+
+When you ask for a model string upgrade, Codex keeps changes narrow:
+
+- Updates **active OpenAI API model defaults** and directly related prompts only
+- Leaves historical docs, eval baselines, fixtures, provider comparisons, pricing tables, and alias defaults **unchanged** unless you explicitly ask
+- Reports as **blocked** if the upgrade needs API-surface changes, schema rewiring, or tool-handler changes beyond a literal model-string swap
+
+## MCP server dependency
+
+This skill depends on the `openaiDeveloperDocs` MCP server:
+
+```yaml
+dependencies:
+  tools:
+    - type: mcp
+      value: openaiDeveloperDocs
+      transport: streamable_http
+      url: https://developers.openai.com/mcp
+```
+
+If MCP tools are unavailable, Codex will attempt to install the server automatically:
+
+```bash
+codex mcp add openaiDeveloperDocs --url https://developers.openai.com/mcp
+```
+
+After installation, restart Codex to activate the server.
+
+## Codex surface selection guide
+
+When deciding where a durable instruction belongs, the skill recommends the smallest matching surface:
+
+| Surface | Best for |
+|---|---|
+| Prompt / thread context | One-off task constraints for the current session |
+| `AGENTS.md` | Repo-wide conventions, commands, verification steps |
+| `.codex/config.toml` | Trusted-repo Codex settings (sandbox, MCP, model, hooks) |
+| Skill | Reusable task workflow with references or scripts |
+| Plugin | Installable bundle with skills, tools, MCP, hooks, and assets |
+| MCP server / connector | Live external data or authorized private app data |
+| Automation | Scheduled checks, monitors, or follow-up work |
+| Hook | Lifecycle enforcement around tool calls or file edits |

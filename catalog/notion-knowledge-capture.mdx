@@ -1,0 +1,151 @@
+---
+title: "Notion Skills: Knowledge and Research in Codex"
+sidebarTitle: "Notion"
+description: "Four curated Notion skills for Codex: capture decisions, prep meetings, synthesize research, and turn specs into implementation plans."
+---
+
+Codex ships four curated Notion skills that cover the full lifecycle of team knowledge work — from capturing raw conversations to translating finished specs into actionable tasks. Each skill connects to the **Notion MCP server** over OAuth so Codex can read and write your Notion workspace directly: searching for existing pages, creating new ones from templates, linking related records, and keeping everything up to date as work progresses.
+
+## The four Notion skills
+
+<CardGroup cols={2}>
+  <Card title="notion-knowledge-capture" icon="book">
+    Convert conversations and notes into structured, linkable Notion pages.
+  </Card>
+  <Card title="notion-meeting-intelligence" icon="calendar">
+    Prepare meeting agendas and pre-reads enriched with Notion context.
+  </Card>
+  <Card title="notion-research-documentation" icon="magnifying-glass">
+    Search multiple Notion sources and synthesize findings into cited reports.
+  </Card>
+  <Card title="notion-spec-to-implementation" icon="list-check">
+    Turn Notion PRDs into linked implementation plans and tasks.
+  </Card>
+</CardGroup>
+
+---
+
+## notion-knowledge-capture
+
+`notion-knowledge-capture` activates whenever you want to preserve a conversation, decision, or piece of institutional knowledge as a permanent, searchable Notion page. Use it when turning chat threads, design discussions, or meeting notes into wiki entries, how-to guides, decision logs, or FAQs.
+
+**Trigger conditions:** Explicitly ask Codex to "capture this decision," "write this up as a how-to," "create a Notion FAQ," or "save this to the wiki."
+
+**What it captures:**
+
+<Steps>
+  <Step title="Define the capture">
+    Clarify purpose (decision, how-to, FAQ, concept, learning, or documentation page) and target audience.
+  </Step>
+  <Step title="Locate the destination">
+    Pick the correct database — team wiki, how-to guide, FAQ, decision log, learning log, or documentation DB — using the built-in schema references.
+  </Step>
+  <Step title="Extract and structure">
+    Pull facts, decisions, rationale, and action items from the conversation. For decisions, record alternatives and outcomes. For how-tos, capture steps, prerequisites, and edge cases.
+  </Step>
+  <Step title="Create or update in Notion">
+    Use `Notion:notion-create-pages` with the correct database and schema, including title, tags, owner, status, dates, and relations. Update existing pages with `Notion:notion-update-page`.
+  </Step>
+  <Step title="Link and surface">
+    Add back-links to hub pages, related specs, and team records. Create follow-up tasks and link them where needed.
+  </Step>
+</Steps>
+
+---
+
+## notion-meeting-intelligence
+
+`notion-meeting-intelligence` helps you prepare for any meeting by pulling relevant Notion context — prior notes, OKRs, specs, and action items — and drafting a tailored agenda or pre-read document.
+
+**Trigger conditions:** Ask Codex to "prep for this meeting," "draft an agenda," "pull context for tomorrow's review," or "build a pre-read."
+
+**What it does:**
+
+- Searches Notion for prior meeting notes, decisions, and open items using `Notion:notion-search` and `Notion:notion-fetch`.
+- Selects the right template (status update, decision meeting, sprint planning, retrospective, 1:1, or brainstorming) based on your meeting type.
+- Builds a structured agenda with owner assignments and timeboxes for every item.
+- Enriches the draft with relevant research — benchmarks, industry facts, or risk summaries — added as cited sections.
+- Creates the page in Notion and keeps it updated as plans change via `Notion:notion-update-page`.
+
+<Note>
+  If follow-up tasks arise during meeting prep, the skill can create linked tasks in the relevant Notion database and surface them in the agenda.
+</Note>
+
+---
+
+## notion-research-documentation
+
+`notion-research-documentation` searches across your Notion workspace, synthesizes findings from multiple pages, and publishes a well-cited brief, comparison, or comprehensive report.
+
+**Trigger conditions:** Ask Codex to "research this topic across Notion," "write a competitive comparison," "produce an exec brief," or "summarize everything we have on X."
+
+**What it does:**
+
+- Runs targeted `Notion:notion-search` queries and fetches the most relevant pages, capturing citation metadata for every source.
+- Lets you choose the output format — quick brief, research summary, option comparison, or comprehensive report — using the built-in format selection guide.
+- Drafts the document in Notion using the matching template, with inline citations and a references section that links back to source pages.
+- Flags gaps, contradictions, and open questions so the reader knows where the evidence is solid vs. thin.
+
+---
+
+## notion-spec-to-implementation
+
+`notion-spec-to-implementation` reads a Notion PRD or feature spec and converts it into a linked implementation plan plus a full set of sized, assignable tasks — keeping everything in sync as work progresses.
+
+**Trigger conditions:** Ask Codex to "implement this spec," "break this PRD into tasks," "create an implementation plan from this Notion page," or "track progress on this feature."
+
+**What it does:**
+
+<Steps>
+  <Step title="Locate and read the spec">
+    Finds the spec with `Notion:notion-search` and fetches it with `Notion:notion-fetch`, extracting requirements, acceptance criteria, constraints, and priorities.
+  </Step>
+  <Step title="Choose plan depth">
+    Uses a quick plan for simple changes or a multi-phase standard plan for large features or migrations.
+  </Step>
+  <Step title="Create tasks">
+    Sizes each task to one to two days, writes clear acceptance criteria, and creates pages in the task database using `Notion:notion-create-pages`.
+  </Step>
+  <Step title="Link artifacts">
+    Connects spec ↔ plan ↔ tasks with Notion relations, then optionally adds an "Implementation" section back on the spec page.
+  </Step>
+  <Step title="Track progress">
+    Posts status updates, closes phases with milestone summaries, and keeps checklists in sync via `Notion:notion-update-page`.
+  </Step>
+</Steps>
+
+---
+
+## MCP dependency: Notion MCP server
+
+All four Notion skills require the **Notion MCP server**. If a skill detects that Notion MCP is not connected, it will pause and guide you through setup:
+
+```bash
+# 1. Add the Notion MCP server
+codex mcp add notion --url https://mcp.notion.com/mcp
+
+# 2. Enable the remote MCP client
+codex --enable rmcp_client
+
+# 3. Authenticate via OAuth
+codex mcp login notion
+```
+
+After a successful login you must **restart Codex** before the skill can proceed.
+
+---
+
+## Installing
+
+Install each Notion skill you need individually. You can install all four or only the ones relevant to your workflow.
+
+```bash
+$skill-installer notion-knowledge-capture
+$skill-installer notion-meeting-intelligence
+$skill-installer notion-research-documentation
+$skill-installer notion-spec-to-implementation
+```
+
+<Note>
+  Restart Codex after installing to pick up the new skills.
+</Note>

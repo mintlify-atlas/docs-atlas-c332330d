@@ -1,0 +1,242 @@
+---
+title: "Cloudflare Deploy Skill: Workers and Pages"
+sidebarTitle: "Cloudflare"
+description: "Deploy to Cloudflare Workers, Pages, and the full platform — KV, D1, R2, Queues, Durable Objects, and more — from Codex using Wrangler."
+---
+
+The Cloudflare Deploy skill gives Codex the knowledge to deploy across the entire Cloudflare developer platform. Whether you're shipping a serverless function on **Workers**, a full-stack app on **Pages**, or wiring up storage with **KV**, **D1**, **R2**, or **Queues**, Codex can pick the right product, authenticate with Wrangler, and deploy — all from your workspace. Ask Codex to **"deploy this to Cloudflare Workers"**, **"publish my Pages site"**, or **"set up a D1 database and deploy"** to get started.
+
+## Trigger Phrases
+
+Codex activates this skill when it detects Cloudflare deployment intent. Common phrases include:
+
+- "deploy to Cloudflare Workers"
+- "publish this on Cloudflare Pages"
+- "deploy my Worker and set up KV storage"
+- "ship this to Cloudflare"
+- "set up a D1 database and deploy my app"
+
+## Installing
+
+```bash
+$skill-installer cloudflare-deploy
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## Authentication
+
+Codex verifies authentication before any deploy command runs:
+
+```bash
+npx wrangler whoami
+```
+
+<CardGroup cols={2}>
+  <Card title="Interactive / Local" icon="browser">
+    One-time browser OAuth flow:
+
+    ```bash
+    wrangler login
+    ```
+  </Card>
+  <Card title="CI / CD" icon="key">
+    Set an environment variable:
+
+    ```bash
+    export CLOUDFLARE_API_TOKEN=your_token
+    ```
+  </Card>
+</CardGroup>
+
+<Warning>
+  Always run `npx wrangler whoami` before `wrangler deploy`, `wrangler pages deploy`, or `npm run deploy`. If not authenticated, deployments will fail silently or with a generic error.
+</Warning>
+
+## Choosing the Right Cloudflare Product
+
+Codex uses decision trees from the skill to route you to the right product automatically. The key categories are:
+
+### Compute & Runtime
+
+| Need | Product |
+|------|---------|
+| Serverless functions at the edge | Workers |
+| Full-stack web app with Git deploys | Pages |
+| Stateful coordination / real-time | Durable Objects |
+| Long-running multi-step jobs | Workflows |
+| Run containers | Containers |
+| Scheduled tasks (cron) | Cron Triggers |
+| Lightweight edge logic (modify HTTP) | Snippets |
+| Multi-tenant (customers deploy code) | Workers for Platforms |
+
+### Storage & Data
+
+| Need | Product |
+|------|---------|
+| Key-value (config, sessions, cache) | KV |
+| Relational SQL | D1 (SQLite) |
+| Connect existing Postgres / MySQL | Hyperdrive |
+| Object / file storage (S3-compatible) | R2 |
+| Message queue (async processing) | Queues |
+| Vector embeddings (AI / semantic search) | Vectorize |
+| Secrets management | Secrets Store |
+| Strongly-consistent per-entity state | Durable Objects storage |
+
+### AI & Machine Learning
+
+| Need | Product |
+|------|---------|
+| Run inference (LLMs, embeddings, images) | Workers AI |
+| Vector database for RAG / search | Vectorize |
+| Build stateful AI agents | Agents SDK |
+| Gateway for any AI provider (caching, routing) | AI Gateway |
+
+### Networking & Security
+
+| Need | Product |
+|------|---------|
+| Expose local service to internet | Tunnel |
+| TCP/UDP proxy (non-HTTP) | Spectrum |
+| Web Application Firewall | WAF |
+| DDoS protection | DDoS Protection |
+| Bot detection | Bot Management |
+| CAPTCHA alternative | Turnstile |
+
+## Deployment Workflow
+
+<Steps>
+  <Step title="Authenticate">
+    ```bash
+    npx wrangler whoami
+    ```
+
+    If not authenticated, run `wrangler login` (local) or set `CLOUDFLARE_API_TOKEN` (CI/CD).
+  </Step>
+
+  <Step title="Deploy Workers">
+    For a Cloudflare Worker (serverless function):
+
+    ```bash
+    npx wrangler deploy
+    ```
+
+    Or if you have a build step:
+
+    ```bash
+    npm run deploy
+    ```
+
+    Codex loads the detailed Workers reference (`references/workers/`) for configuration, bindings, and runtime APIs.
+  </Step>
+
+  <Step title="Deploy Pages">
+    For a full-stack app or static site on Cloudflare Pages:
+
+    ```bash
+    npx wrangler pages deploy ./dist
+    ```
+
+    Pages connects to your Git repository for automatic deploys on push. Codex loads `references/pages/` for routing, build configuration, and Pages Functions.
+  </Step>
+
+  <Step title="Add Storage Bindings">
+    Codex helps you configure storage bindings in `wrangler.toml` as needed:
+
+    ```toml
+    # KV Namespace
+    [[kv_namespaces]]
+    binding = "MY_KV"
+    id = "abc123..."
+
+    # D1 Database
+    [[d1_databases]]
+    binding = "DB"
+    database_name = "my-database"
+    database_id = "def456..."
+
+    # R2 Bucket
+    [[r2_buckets]]
+    binding = "MY_BUCKET"
+    bucket_name = "my-bucket"
+    ```
+  </Step>
+</Steps>
+
+## Platform Coverage
+
+This skill covers the full Cloudflare developer platform. The complete product index Codex can help you deploy to:
+
+<CardGroup cols={2}>
+  <Card title="Compute & Runtime" icon="microchip">
+    Workers, Pages, Pages Functions, Durable Objects, Workflows, Containers, Workers for Platforms, Cron Triggers, Tail Workers, Snippets, Smart Placement
+  </Card>
+  <Card title="Storage & Data" icon="database">
+    KV, D1, R2, Queues, Hyperdrive, Durable Objects Storage, Secrets Store, Pipelines, R2 Data Catalog, R2 SQL
+  </Card>
+  <Card title="AI & ML" icon="brain">
+    Workers AI, Vectorize, Agents SDK, AI Gateway, AI Search
+  </Card>
+  <Card title="Networking" icon="network-wired">
+    Tunnel, Spectrum, TURN, Network Interconnect, Argo Smart Routing, Workers VPC
+  </Card>
+  <Card title="Security" icon="shield-halved">
+    WAF, DDoS Protection, Bot Management, API Shield, Turnstile
+  </Card>
+  <Card title="Media & Content" icon="photo-film">
+    Images, Stream, Browser Rendering, Zaraz, Cache Reserve
+  </Card>
+  <Card title="Real-Time Comms" icon="tower-broadcast">
+    RealtimeKit, Realtime SFU
+  </Card>
+  <Card title="Infrastructure as Code" icon="code">
+    Pulumi, Terraform, REST API
+  </Card>
+</CardGroup>
+
+## Infrastructure as Code
+
+For teams that prefer IaC, Codex can generate configuration for Pulumi or Terraform, or interact with the Cloudflare REST API directly.
+
+```bash
+# Pulumi
+# references/pulumi/
+
+# Terraform
+# references/terraform/
+
+# REST API
+# references/api/
+```
+
+## Escalated Network Access
+
+If a deploy fails due to network issues (timeouts, DNS errors, connection resets), Codex will ask before retrying with elevated permissions:
+
+```
+The deploy needs escalated network access to deploy to Cloudflare.
+I can rerun the command with escalated permissions — want me to proceed?
+```
+
+<Note>
+  As with all deploy skills, the authentication check (`wrangler whoami`) never requires escalated permissions — only the actual deploy command does.
+</Note>
+
+## Developer Tools
+
+Codex uses these tools throughout the deployment process:
+
+| Tool | Purpose |
+|------|---------|
+| **Wrangler** | Primary CLI for Workers, Pages, and all platform services |
+| **Miniflare** | Local simulator for Workers (testing without deploying) |
+| **C3** (`create-cloudflare`) | Scaffold new Workers and Pages projects |
+| **Observability** | Logs, metrics, and tracing for deployed services |
+| **Workers Playground** | Browser-based REPL for quick Worker testing |
+
+## Reference
+
+- [Wrangler CLI Docs](https://developers.cloudflare.com/workers/wrangler/)
+- [Workers Documentation](https://developers.cloudflare.com/workers/)
+- [Pages Documentation](https://developers.cloudflare.com/pages/)
+- [Cloudflare Developer Platform](https://developers.cloudflare.com/)

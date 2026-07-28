@@ -1,0 +1,186 @@
+---
+title: "Skill Creator: Build Custom Codex Skills"
+sidebarTitle: "Skill Creator"
+description: "Guides Codex through designing, scaffolding, and validating new skills — from clarifying the use case all the way to a production-ready skill folder."
+---
+
+The Skill Creator is the system skill you reach for whenever you want to extend Codex with a new capability. It walks you through every stage of skill development — clarifying what the skill should do, planning reusable resources, initializing the folder structure, writing `SKILL.md`, and validating the result — so you end up with a well-structured, token-efficient skill that another Codex instance can reliably trigger and use. It also handles updates to existing skills, including regenerating stale `agents/openai.yaml` metadata.
+
+<Note>
+  The Skill Creator is a **system skill** — it is pre-installed in every Codex environment and cannot be removed by users.
+</Note>
+
+## What skills are
+
+Skills are modular, self-contained folders that extend Codex with specialized knowledge, workflows, and tools. Think of them as onboarding guides for a specific domain — they give Codex the procedural knowledge, reference material, and executable scripts it needs to handle a task reliably, without that knowledge needing to live in the base model.
+
+<CardGroup cols={2}>
+  <Card title="Specialized workflows" icon="diagram-project">
+    Multi-step procedures for specific domains (PDF processing, image editing, database queries, etc.)
+  </Card>
+  <Card title="Tool integrations" icon="plug">
+    Instructions for working with specific file formats, CLIs, or external APIs
+  </Card>
+  <Card title="Domain expertise" icon="building">
+    Company-specific schemas, business logic, and policies bundled as references
+  </Card>
+  <Card title="Bundled resources" icon="box-archive">
+    Scripts, reference docs, and asset templates for complex or repetitive tasks
+  </Card>
+</CardGroup>
+
+## Anatomy of a skill
+
+```
+skill-name/
+├── SKILL.md                  # Required — frontmatter + instructions
+├── agents/
+│   └── openai.yaml           # Recommended — UI metadata (display name, prompt)
+└── (optional resources)
+    ├── scripts/              # Executable Python/Bash scripts
+    ├── references/           # Docs loaded into context as needed
+    └── assets/               # Files used in output (templates, icons, fonts)
+```
+
+**SKILL.md** has two parts:
+- **Frontmatter** — `name` and `description` fields. This is how Codex decides when to trigger the skill, so the description must be comprehensive about both what the skill does and when to use it.
+- **Body** — instructions loaded only after the skill triggers.
+
+<Tip>
+  Keep `SKILL.md` under 500 lines. Move detailed reference material, schemas, and examples to `references/` files and link to them from `SKILL.md` with clear "when to read this" notes.
+</Tip>
+
+## The 6-step creation workflow
+
+<Steps>
+  <Step title="Understand the skill with concrete examples">
+    Clarify what the skill should handle. Ask about specific user requests it should respond to ("What would a user say to trigger this skill?") and validate a few example scenarios before planning anything. Skip only when the usage patterns are already fully understood.
+  </Step>
+  <Step title="Plan the reusable skill contents">
+    For each concrete example, identify what scripts, references, and assets would make the workflow more reliable and token-efficient across repeated runs. A `pdf-editor` skill that keeps rewriting rotation code benefits from `scripts/rotate_pdf.py`; a `bigquery` skill benefits from `references/schema.md`.
+  </Step>
+  <Step title="Initialize the skill">
+    Run `init_skill.py` to scaffold the folder, generate `SKILL.md` with proper frontmatter and TODO placeholders, and create `agents/openai.yaml` with UI metadata. Skip this step only if the skill already exists.
+
+    ```bash
+    scripts/init_skill.py <skill-name> --path skills/public
+    ```
+  </Step>
+  <Step title="Edit the skill">
+    Start with the reusable resources (`scripts/`, `references/`, `assets/`), then write `SKILL.md`. Test any added scripts by actually running them. Use imperative/infinitive form in all instructions. Remember: you are writing for another Codex instance, not a human.
+  </Step>
+  <Step title="Validate the skill">
+    Run `quick_validate.py` to catch frontmatter format errors, missing required fields, and naming rule violations.
+
+    ```bash
+    scripts/quick_validate.py path/to/skill-folder
+    ```
+  </Step>
+  <Step title="Iterate based on real usage">
+    Use the skill on actual tasks, notice what struggles, update `SKILL.md` or the bundled resources, and repeat. Iteration often happens immediately after the first real use with full context still available.
+  </Step>
+</Steps>
+
+## Bundled scripts
+
+### `scripts/init_skill.py` — scaffold a new skill
+
+```bash
+# Basic scaffold
+scripts/init_skill.py my-skill --path skills/public
+
+# With resource directories
+scripts/init_skill.py my-skill --path skills/public --resources scripts,references
+
+# With example placeholder files
+scripts/init_skill.py my-skill --path skills/public --resources scripts --examples
+
+# Pass UI metadata directly
+scripts/init_skill.py my-skill --path skills/public \
+  --interface display_name="My Skill" \
+  --interface short_description="Do the thing" \
+  --interface default_prompt="Help me with the thing"
+```
+
+The script creates the skill directory, generates `SKILL.md` with frontmatter and TODO markers, and writes `agents/openai.yaml` with the provided interface values. If you pass `--examples`, replace or delete any placeholder files before shipping.
+
+### `scripts/generate_openai_yaml.py` — regenerate UI metadata
+
+Use this to create or update `agents/openai.yaml` for an existing skill when the metadata is stale or was never generated:
+
+```bash
+scripts/generate_openai_yaml.py path/to/skill-folder \
+  --interface display_name="My Skill" \
+  --interface short_description="Do the thing" \
+  --interface default_prompt="Help me with the thing"
+```
+
+### `scripts/quick_validate.py` — validate a skill folder
+
+```bash
+scripts/quick_validate.py path/to/skill-folder
+```
+
+Checks YAML frontmatter format, required fields (`name`, `description`), and naming rules. Fix any reported issues and re-run until validation passes.
+
+## Naming rules
+
+- Lowercase letters, digits, and hyphens only: `my-skill`, not `MySkill` or `my_skill`
+- Maximum 64 characters
+- Prefer short, verb-led phrases: `rotate-pdf`, `gh-address-comments`
+- The skill folder name must exactly match the `name` field in frontmatter
+- Namespace by tool when it improves triggering clarity: `linear-address-issue`, `gh-open-pr`
+
+## Core design principles
+
+### Concise is key
+
+The context window is shared with the system prompt, conversation history, other skill metadata, and the user's actual request. Only add context Codex doesn't already have. Challenge every paragraph: "Does this justify its token cost?"
+
+### Progressive disclosure
+
+Skills use a three-level loading system:
+
+| Level | What's loaded | Size target |
+|---|---|---|
+| Metadata (`name` + `description`) | Always in context | ~100 words |
+| `SKILL.md` body | When skill triggers | Under 500 lines |
+| Bundled resources | As needed, on demand | Unlimited |
+
+### Degrees of freedom
+
+Match instruction specificity to the task's fragility:
+
+- **High freedom (prose)** — multiple valid approaches, heuristics guide the path
+- **Medium freedom (pseudocode/parameterized scripts)** — preferred pattern, some variation allowed
+- **Low freedom (specific scripts, few parameters)** — fragile operations where consistency is critical
+
+### What not to include
+
+Never add files that exist to explain the skill's development process rather than to help an AI execute a task:
+
+- `README.md`
+- `INSTALLATION_GUIDE.md`
+- `QUICK_REFERENCE.md`
+- `CHANGELOG.md`
+
+The skill folder should contain only what helps another Codex instance do the job.
+
+## Invoking skill-creator from Codex
+
+Just describe what you want to build in natural language:
+
+```
+Create a skill that rotates and crops PDF files.
+```
+
+```
+Build a skill for querying our BigQuery tables — 
+here are the schema docs: [paste schema]
+```
+
+```
+Update the openai.yaml for my existing pdf-editor skill.
+```
+
+Codex will follow the 6-step workflow, ask clarifying questions one at a time, and scaffold the skill for you.

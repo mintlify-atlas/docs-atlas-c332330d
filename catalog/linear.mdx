@@ -1,0 +1,115 @@
+---
+title: "Linear Skill: Issue and Project Tracking"
+sidebarTitle: "Linear"
+description: "Manage Linear issues, projects, and team workflows directly from Codex — create, update, triage, and plan without leaving your editor."
+---
+
+The `linear` skill connects Codex to your Linear workspace via the **Linear MCP server**, giving you natural-language access to every corner of your project management setup. Instead of switching between your editor and the Linear UI, you can create and update issues, plan sprints, balance team workloads, and generate release plans — all from a single Codex prompt.
+
+## Trigger conditions
+
+Use the `linear` skill whenever you want to interact with Linear data. Common triggers include:
+
+- "Triage this week's open bugs in Linear"
+- "Create a Linear issue for this error"
+- "What is John working on this sprint?"
+- "Plan the v2.0 release in Linear"
+- "Balance workload across the team"
+- "Add a comment to issue ENG-123"
+
+## What it enables
+
+<CardGroup cols={2}>
+  <Card title="Issue Management" icon="ticket">
+    List, view, create, and update issues. Filter by assignee, label, priority, or cycle. Bulk-triage unresolved bugs and move items between statuses.
+  </Card>
+  <Card title="Project & Team Ops" icon="folder-open">
+    List and create projects, inspect team configurations, view all users, and generate cross-project dependency reports.
+  </Card>
+  <Card title="Sprint Planning" icon="calendar-days">
+    Pull open issues for a team, rank by priority and user impact, create a new cycle, and assign the top items in one flow.
+  </Card>
+  <Card title="Documentation & Comments" icon="file-lines">
+    Search and read Linear documents, list and create comments on issues, and surface stale documentation for updates.
+  </Card>
+</CardGroup>
+
+## Practical workflows
+
+The skill ships with ready-made patterns for the most common Linear workflows:
+
+| Workflow | What Codex does |
+|---|---|
+| **Bug Triage** | Lists critical/high-priority bugs, ranks by user impact, moves top items to "In Progress" |
+| **Sprint Planning** | Reviews open issues, picks top items by priority, creates a new cycle with assignments |
+| **Release Planning** | Creates a project with milestones (feature freeze, beta, docs, launch) and generates sized issues |
+| **Team Workload Balance** | Groups active issues by assignee, flags overloaded members, redistributes work |
+| **Documentation Audit** | Searches docs for gaps, opens labeled issues with detailed fixes |
+| **Sprint Retrospective** | Reports on the last completed cycle: completed vs. pushed work, opens discussion issues |
+| **Cross-Project Dependencies** | Finds all "blocked" issues, identifies blockers, creates linked issues where missing |
+| **Smart Labeling** | Analyzes unlabeled issues, suggests and applies labels, creates missing label categories |
+
+## Default prompt
+
+When you install the skill, its default prompt is:
+
+> "Use Linear context to triage or update relevant issues for this task, with clear next actions."
+
+## MCP dependency: Linear MCP server
+
+The `linear` skill requires the **Linear MCP server**. If the skill detects it is not connected, it will pause and guide you through setup:
+
+```bash
+# 1. Add the Linear MCP server
+codex mcp add linear --url https://mcp.linear.app/mcp
+
+# 2. Enable the remote MCP client
+codex --enable rmcp_client
+
+# 3. Authenticate via OAuth
+codex mcp login linear
+```
+
+After a successful login you must **restart Codex** before the skill can make Linear API calls.
+
+<Note>
+  **Windows / WSL users:** If you see connection errors, configure the Linear MCP to run via WSL:
+
+  ```json
+  {
+    "mcpServers": {
+      "linear": {
+        "command": "wsl",
+        "args": ["npx", "-y", "mcp-remote", "https://mcp.linear.app/sse", "--transport", "sse-only"]
+      }
+    }
+  }
+  ```
+</Note>
+
+## Troubleshooting
+
+<CardGroup cols={2}>
+  <Card title="Authentication errors" icon="lock">
+    Clear browser cookies, re-run OAuth, verify workspace permissions, and confirm that API access is enabled in your Linear settings.
+  </Card>
+  <Card title="Missing data" icon="circle-question">
+    Refresh your token, verify workspace access, check for archived projects, and confirm the correct team is selected.
+  </Card>
+  <Card title="Tool call errors" icon="triangle-exclamation">
+    Confirm the model supports multiple tool calls, provide all required fields (issue ID, project ID, team key), and split complex requests into smaller steps.
+  </Card>
+  <Card title="Rate limits" icon="gauge">
+    Batch bulk operations, use specific filters, and cache or reuse query results for frequently accessed data.
+  </Card>
+</CardGroup>
+
+## Installing
+
+```bash
+$skill-installer linear
+```
+
+<Note>
+  Restart Codex after installing to pick up the new skill.
+</Note>

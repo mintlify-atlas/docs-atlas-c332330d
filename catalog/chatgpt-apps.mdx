@@ -1,0 +1,170 @@
+---
+title: "ChatGPT Apps Skill: Build ChatGPT Extensions"
+sidebarTitle: "ChatGPT Apps"
+description: "Scaffold, refactor, and ship ChatGPT App extensions that combine an MCP server and widget UI using the Apps SDK and MCP Apps bridge."
+---
+
+The ChatGPT Apps skill helps Codex design, scaffold, and deliver ChatGPT app extensions that combine an MCP server with an in-chat widget UI. It follows a docs-first workflow — fetching current OpenAI Apps SDK guidance before generating any code — and classifies every request into one of five app archetypes to select the right starting point, repo shape, and validation approach. The result is a working repo with tool schemas, widget wiring, security configuration, and local dev instructions.
+
+## When to trigger this skill
+
+This skill activates when you ask Codex to:
+
+- **Scaffold a new ChatGPT app** from a use case description
+- **Build or refactor** an MCP server with tools for ChatGPT
+- **Wire a widget UI** using the MCP Apps bridge or `window.openai` APIs
+- **Apply Apps SDK metadata**, CSP, or domain settings
+- **Adapt an official OpenAI example** into a project-specific app
+- **Prepare a submission-ready app** for the ChatGPT directory
+
+## App archetypes
+
+Before choosing examples or generating code, the skill classifies every request into one primary archetype.
+
+<CardGroup cols={2}>
+  <Card title="tool-only" icon="wrench">
+    No in-chat UI needed. MCP server only. Best for search, fetch, retrieval, or background actions. Default read-only tools: `search` and `fetch`.
+  </Card>
+  <Card title="vanilla-widget" icon="window-maximize">
+    A single HTML widget for demos, workshops, or simple inline views. Root-level server plus `public/` assets. Fastest path to a working repo.
+  </Card>
+  <Card title="react-widget" icon="react">
+    Polished component-based UI. Split `server/` + `web/` layout. Best starting point: official OpenAI examples.
+  </Card>
+  <Card title="interactive-decoupled" icon="arrows-rotate">
+    Long-lived widget state with repeated tool calls. Boards, maps, editors, games, dashboards. Uses data tools + render tools. Requires idempotent handlers.
+  </Card>
+</CardGroup>
+
+<Card title="submission-ready" icon="rocket">
+  Only escalate to this archetype when the user asks for public launch, directory review, or org-verified deployment. Includes `_meta.ui.domain`, accurate CSP, and submission artifacts.
+</Card>
+
+## Build workflow
+
+<Steps>
+  <Step title="Fetch current docs first">
+    Invoke `$openai-docs` (or the OpenAI Developer Docs MCP server) to fetch current Apps SDK guidance before writing any code — especially `apps-sdk/build/mcp-server`, `apps-sdk/build/chatgpt-ui`, `apps-sdk/plan/tools`, and `apps-sdk/reference`.
+  </Step>
+  <Step title="Classify the archetype">
+    Choose one primary archetype and state it so you can correct it early. Infer the smallest archetype that satisfies the request.
+  </Step>
+  <Step title="Plan tools before code">
+    Define one tool per user intent. Write descriptions starting with "Use this when...". Set annotations accurately: `readOnlyHint`, `destructiveHint`, `openWorldHint`, `idempotentHint`.
+  </Step>
+  <Step title="Choose a starting point">
+    Prefer in order: (1) official OpenAI examples, (2) `@modelcontextprotocol/ext-apps` examples, (3) `scripts/scaffold_node_ext_apps.mjs` as a last-resort minimal starter.
+  </Step>
+  <Step title="Scaffold the MCP server">
+    Register the widget resource with MIME type `text/html;profile=mcp-app`. Return `structuredContent` for model + widget, `content` for model narration, and `_meta` for widget-only data.
+  </Step>
+  <Step title="Scaffold the widget UI">
+    Build baseline behavior on the MCP Apps bridge (`ui/notifications/tool-result`, `tools/call`, `ui/message`). Add `window.openai` APIs only when they materially improve UX.
+  </Step>
+  <Step title="Apply metadata and security">
+    Set `_meta.ui.csp` with exact `connectDomains` and `resourceDomains`. Add `_meta.ui.domain` for submission-ready apps. Set `_meta.ui.prefersBorder` as appropriate.
+  </Step>
+  <Step title="Validate against the repo contract">
+    Run the lowest-cost checks first (static review, syntax), then runtime checks (MCP Inspector, ChatGPT developer mode via HTTPS tunnel). Always report what was and was not validated.
+  </Step>
+</Steps>
+
+## Installing
+
+```bash
+$skill-installer chatgpt-apps
+```
+
+Restart Codex after installation to pick up the new skill.
+
+## The scaffold script
+
+`scripts/scaffold_node_ext_apps.mjs` generates a minimal Node + `@modelcontextprotocol/ext-apps` starter with a vanilla HTML widget. Use it **only** when no close upstream example fits and the user wants a quick local baseline.
+
+```bash
+node scripts/scaffold_node_ext_apps.mjs --name my-app --out ./my-app
+```
+
+The generated project includes:
+- `package.json` with `@modelcontextprotocol/ext-apps` and `@modelcontextprotocol/sdk` dependencies
+- A TypeScript MCP server scaffold (`src/server.ts`)
+- A vanilla HTML widget using the MCP Apps bridge by default
+- `tsconfig.json` and local run scripts
+
+<Tip>
+  After running the scaffold script, reconcile the output with the docs you fetched: tool names and descriptions, annotations, resource metadata, URI versioning, and README run instructions. Do not ship the generated scaffold unchanged.
+</Tip>
+
+## `window.openai` API surface
+
+Use `window.openai` for ChatGPT-specific convenience on top of the MCP Apps bridge baseline — not as the only integration path.
+
+**State and data:**
+
+```javascript
+window.openai.toolInput          // tool arguments from the host
+window.openai.toolOutput         // current structuredContent
+window.openai.toolResponseMetadata  // current _meta payload (widget-only)
+window.openai.widgetState        // persisted widget-local snapshot
+window.openai.setWidgetState(state) // persist after meaningful UI changes
+```
+
+**Runtime APIs:**
+
+```javascript
+window.openai.callTool(name, args)
+window.openai.sendFollowUpMessage({ prompt, scrollToBottom? })
+window.openai.openExternal({ href, redirectUrl? })
+window.openai.requestDisplayMode({ mode })   // 'inline' | 'pip' | 'fullscreen'
+window.openai.requestModal({ params, template? })
+window.openai.requestClose()
+window.openai.uploadFile(file, options?)
+window.openai.selectFiles()
+window.openai.getFileDownloadUrl({ fileId })
+```
+
+**Context signals (read-only globals):**
+
+```javascript
+window.openai.theme
+window.openai.displayMode
+window.openai.locale
+window.openai.maxHeight
+window.openai.safeArea
+window.openai.userAgent
+```
+
+<Note>
+  Older repo examples may use an `app` wrapper with helpers like `app.callServerTool()`, `app.sendMessage()`, or `app.openLink()`. Always map these back to the canonical `window.openai` surface or MCP Apps bridge primitives. The wrapper is not the normative API.
+</Note>
+
+## Local dev and ChatGPT testing
+
+```bash
+# 1. Start the MCP server locally
+npm run dev   # or tsx src/server.ts
+
+# 2. Expose it via HTTPS tunnel
+ngrok http 3000
+
+# 3. In ChatGPT: Settings → Apps & Connectors → Advanced settings → Enable Developer Mode
+# 4. Create a new app using the tunneled HTTPS URL + /mcp path
+# 5. Refresh the app after any MCP tool or metadata changes
+```
+
+## References included with this skill
+
+| File | Contents |
+|---|---|
+| `references/app-archetypes.md` | Decision rubric for classifying requests into supported app shapes |
+| `references/window-openai-patterns.md` | Canonical `window.openai` surface, wrapper-to-bridge mapping, React helpers |
+| `references/apps-sdk-docs-workflow.md` | Doc query checklist and code-generation workflow |
+| `references/repo-contract-and-validation.md` | Minimum working repo contract and validation ladder |
+| `references/upstream-example-workflow.md` | How to choose and adapt upstream examples vs the local scaffold |
+| `references/search-fetch-standard.md` | When to default to standard `search` and `fetch` tools |
+| `references/interactive-state-sync-patterns.md` | State sync patterns for stateful or highly interactive widget apps |
+| `scripts/scaffold_node_ext_apps.mjs` | Minimal Node + `@modelcontextprotocol/ext-apps` fallback starter |
+
+## Default prompt
+
+> Use `$chatgpt-apps` with `$openai-docs` to scaffold a ChatGPT app for [use case] with a [TS/Python] MCP server and [React/vanilla] widget.
