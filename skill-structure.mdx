@@ -8,7 +8,7 @@ Every skill is a self-contained directory. The structure is deliberately minimal
 
 ## Canonical Directory Layout
 
-```
+```text
 skill-name/
 ├── SKILL.md              ← required
 ├── agents/
@@ -96,7 +96,7 @@ Invalid names: `GH_Address_Comments`, `vercel deploy`, `my--skill`, `-leading-hy
 
 The `gh-address-comments` curated skill demonstrates a complete, minimal structure:
 
-```
+```text
 gh-address-comments/
 ├── SKILL.md
 ├── agents/
@@ -113,8 +113,6 @@ name: gh-address-comments
 description: Help address review/issue comments on the open GitHub PR for the
   current branch using gh CLI; verify gh auth first and prompt the user to
   authenticate if not logged in.
-metadata:
-  short-description: Address comments in a GitHub PR review
 ---
 
 # PR Comment Handler
@@ -123,10 +121,6 @@ Guide to find the open PR for the current branch and address its comments
 with gh CLI. Run all `gh` commands with elevated network access.
 ...
 ```
-
-<Note>
-  The `metadata:` block in the frontmatter (like `short-description`) is not used by Codex for triggering. Only `name` and `description` determine when a skill activates. Metadata sub-fields exist for other tooling purposes.
-</Note>
 
 ## What NOT to Include
 

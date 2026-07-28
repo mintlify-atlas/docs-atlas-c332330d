@@ -10,6 +10,24 @@ Creating a skill is the process of packaging specialized knowledge, workflows, a
   Codex is already very smart. Before writing anything, ask: "Does Codex genuinely need this information, or does it already know it?" The best skills provide procedural knowledge, domain-specific schemas, or reusable resources that a general-purpose model cannot possess — not verbose explanations of things Codex handles well on its own.
 </Tip>
 
+## Degrees of Freedom
+
+One of the most important design decisions in a skill is how much latitude you give Codex to improvise. Match the level of specificity to how fragile or variable the task is.
+
+<CardGroup cols={3}>
+  <Card title="High Freedom" icon="sliders">
+    **Text-based instructions.** Use when multiple approaches are valid, decisions depend on context, or heuristics guide the approach. Codex explores many routes — like navigating an open field.
+  </Card>
+  <Card title="Medium Freedom" icon="code">
+    **Pseudocode or scripts with parameters.** Use when a preferred pattern exists but some variation is acceptable, or when configuration affects behavior.
+  </Card>
+  <Card title="Low Freedom" icon="lock">
+    **Specific scripts, few parameters.** Use when operations are fragile and error-prone, consistency is critical, or a specific sequence must be followed exactly. Like a narrow bridge — guardrails keep things on track.
+  </Card>
+</CardGroup>
+
+Most skills mix levels: a high-freedom orientation step followed by low-freedom scripts for the error-prone operations.
+
 ## The Six-Step Process
 
 <Steps>
@@ -84,7 +102,7 @@ Creating a skill is the process of packaging specialized knowledge, workflows, a
 
     **What the script generates:**
 
-    ```
+    ```text
     skills/public/my-skill/
     ├── SKILL.md              ← template with TODO placeholders
     ├── agents/

@@ -1,10 +1,10 @@
 ---
-title: "Yeet Skill: Quick File Publishing from Codex"
+title: "Yeet Skill: One-Command PR from Codex"
 sidebarTitle: "Yeet"
-description: "Stage, commit, push, and open a GitHub pull request in one Codex flow — branch naming, PR templates, and conventional commit messages included."
+description: "Stage, commit, push, and open a GitHub pull request in one Codex flow — automatic branch naming, PR template discovery, and structured PR bodies."
 ---
 
-The `yeet` skill compresses the entire "I'm done coding, time to open a PR" sequence into a single Codex prompt. It stages your changes, writes a focused conventional commit message, pushes to a tracking branch, discovers and applies your repository's PR template (if one exists), and opens a well-structured draft pull request — all through the GitHub CLI (`gh`). What normally takes several terminal commands and careful copy-pasting happens in one coherent, reviewable flow.
+The `yeet` skill compresses the entire "I'm done coding, time to open a PR" sequence into a single Codex prompt. It stages your changes, writes a terse commit message, pushes to a tracking branch, discovers and applies your repository's PR template (if one exists), and opens a well-structured draft pull request — all through the GitHub CLI (`gh`). What normally takes several terminal commands and careful copy-pasting happens in one coherent, reviewable flow.
 
 ## Trigger conditions
 
@@ -45,7 +45,7 @@ Once prerequisites are confirmed, `yeet` runs through the following steps automa
     If you are on `main`, `master`, or the default branch, a new branch is created using your change description as the name. If you are already on a feature branch, the skill stays put.
   </Step>
   <Step title="Stage and commit">
-    Runs `git status -sb` to confirm what is changing, then `git add -A` to stage everything. Commits with a terse conventional commit message in the format `<type>(<scope>): <subject>` (e.g., `feat: add hat wobble`).
+    Runs `git status -sb` to confirm what is changing, then `git add -A` to stage everything. Commits with a terse message describing the change.
   </Step>
   <Step title="Run checks">
     If pre-push checks are configured and have not yet run, the skill runs them. If they fail due to missing dependencies, it installs deps and retries once.

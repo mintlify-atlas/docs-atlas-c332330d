@@ -1,5 +1,5 @@
 ---
-title: "Vercel Deploy Skill: Ship Apps from Codex"
+title: "Vercel Deploy Skill: Ship Apps to Vercel from Codex"
 sidebarTitle: "Vercel"
 description: "Deploy apps to Vercel from Codex via CLI or a no-auth fallback script. Always previews first; production only when explicitly requested."
 ---
@@ -77,7 +77,7 @@ Codex will never deploy to production unless you say something like "deploy to p
 
 <CardGroup cols={2}>
   <Card title="Framework Detection" icon="magnifying-glass">
-    Reads `package.json` to identify the framework (Next.js, Remix, Astro, SvelteKit, Vite, and 40+ others). Detected framework is passed to the deploy API for optimized builds.
+    Reads `package.json` to identify the framework (Next.js, Remix, Astro, SvelteKit, Vite, and many others). The detected framework is passed to the deploy API for optimized builds.
   </Card>
   <Card title="Project Packaging" icon="box-archive">
     Stages project files into a temp directory, excludes `node_modules`, `.git`, and `.env` files, then creates a compressed tarball for upload.
@@ -86,7 +86,7 @@ Codex will never deploy to production unless you say something like "deploy to p
     For projects without `package.json`, locates the single root HTML file and renames it to `index.html` if needed.
   </Card>
   <Card title="Build Polling" icon="rotate">
-    After upload, polls the preview URL every 5 seconds (up to 5 minutes) until it returns a non-5xx status, confirming the build is live.
+    After upload, polls the preview URL every 5 seconds (up to 5 minutes). Continues while the server returns 5xx (still building); stops as soon as any non-5xx response is received, confirming the build is ready.
   </Card>
 </CardGroup>
 

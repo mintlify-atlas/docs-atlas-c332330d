@@ -1,5 +1,5 @@
 ---
-title: "Plugin Creator: Package Skills as Codex Plugins"
+title: "Plugin Creator: Scaffold and Publish Codex Plugins"
 sidebarTitle: "Plugin Creator"
 description: "Scaffolds Codex plugin directories with a valid plugin.json manifest, optional structure folders, and marketplace.json entries ready to publish locally."
 ---
@@ -75,8 +75,11 @@ Reach for this skill when you want to:
 | `--with-mcp` | Create a `.mcp.json` placeholder |
 | `--with-apps` | Create a `.app.json` placeholder |
 | `--with-marketplace` | Generate or update `marketplace.json` |
-| `--marketplace-path <path>` | Override marketplace file location |
-| `--force` | Overwrite an existing marketplace entry for the same plugin name |
+| `--marketplace-path <path>` | Override marketplace file location (default: `<repo-root>/.agents/plugins/marketplace.json`) |
+| `--install-policy` | `policy.installation` value: `NOT_AVAILABLE`, `AVAILABLE`, `INSTALLED_BY_DEFAULT` (default: `AVAILABLE`) |
+| `--auth-policy` | `policy.authentication` value: `ON_INSTALL`, `ON_USE` (default: `ON_INSTALL`) |
+| `--category` | Marketplace category string (default: `Productivity`) |
+| `--force` | Overwrite an existing plugin directory or marketplace entry |
 
 ## Plugin name normalization
 

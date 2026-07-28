@@ -19,7 +19,7 @@ Skills use a structured, three-level loading hierarchy:
 | Level | Content | When loaded | Approximate size |
 |---|---|---|---|
 | **1. Metadata** | `name` + `description` from SKILL.md frontmatter | Always in context | ~100 words |
-| **2. SKILL.md body** | Full instruction document | After skill triggers | < 5,000 words |
+| **2. SKILL.md body** | Full instruction document | After skill triggers | < 5,000 words / 500 lines |
 | **3. Bundled resources** | Scripts, references, assets | On demand by Codex | Unlimited |
 
 ### Level 1: Metadata (Always in Context)
@@ -74,7 +74,7 @@ For skills that span multiple domains, frameworks, or environments, split refere
 
 **By data domain:**
 
-```
+```text
 bigquery-skill/
 ├── SKILL.md                     ← overview + "read sales.md for sales queries"
 └── references/
@@ -86,7 +86,7 @@ bigquery-skill/
 
 **By deployment target:**
 
-```
+```text
 cloud-deploy-skill/
 ├── SKILL.md                     ← workflow + "read aws.md for AWS deploys"
 └── references/

@@ -1,5 +1,5 @@
 ---
-title: "Cloudflare Deploy Skill: Workers and Pages"
+title: "Cloudflare Deploy Skill: Workers, Pages, and Platform"
 sidebarTitle: "Cloudflare"
 description: "Deploy to Cloudflare Workers, Pages, and the full platform — KV, D1, R2, Queues, Durable Objects, and more — from Codex using Wrangler."
 ---
@@ -69,6 +69,8 @@ Codex uses decision trees from the skill to route you to the right product autom
 | Scheduled tasks (cron) | Cron Triggers |
 | Lightweight edge logic (modify HTTP) | Snippets |
 | Multi-tenant (customers deploy code) | Workers for Platforms |
+| Process Worker execution events (logs/observability) | Tail Workers |
+| Optimize latency to backend infrastructure | Smart Placement |
 
 ### Storage & Data
 
@@ -80,8 +82,10 @@ Codex uses decision trees from the skill to route you to the right product autom
 | Object / file storage (S3-compatible) | R2 |
 | Message queue (async processing) | Queues |
 | Vector embeddings (AI / semantic search) | Vectorize |
-| Secrets management | Secrets Store |
 | Strongly-consistent per-entity state | Durable Objects storage |
+| Secrets management | Secrets Store |
+| Streaming ETL to R2 | Pipelines |
+| Persistent cache (long-term retention) | Cache Reserve |
 
 ### AI & Machine Learning
 
@@ -91,16 +95,27 @@ Codex uses decision trees from the skill to route you to the right product autom
 | Vector database for RAG / search | Vectorize |
 | Build stateful AI agents | Agents SDK |
 | Gateway for any AI provider (caching, routing) | AI Gateway |
+| AI-powered search widget | AI Search |
 
-### Networking & Security
+### Networking & Connectivity
 
 | Need | Product |
 |------|---------|
 | Expose local service to internet | Tunnel |
 | TCP/UDP proxy (non-HTTP) | Spectrum |
+| WebRTC TURN server | TURN |
+| Private network connectivity | Network Interconnect |
+| Optimize routing | Argo Smart Routing |
+| Real-time video / audio | RealtimeKit / Realtime SFU |
+
+### Security
+
+| Need | Product |
+|------|---------|
 | Web Application Firewall | WAF |
 | DDoS protection | DDoS Protection |
-| Bot detection | Bot Management |
+| Bot detection / management | Bot Management |
+| API protection | API Shield |
 | CAPTCHA alternative | Turnstile |
 
 ## Deployment Workflow

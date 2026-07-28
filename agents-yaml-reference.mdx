@@ -35,7 +35,7 @@ dependencies:
 ## `interface` Fields
 
 <ParamField path="interface.display_name" type="string">
-  Human-facing title shown in Codex UI skill lists and chips. Generated automatically from the skill name if not provided (e.g., `gh-address-comments` → `"GH Address Comments"`). Use proper casing; well-known acronyms are uppercased automatically (`GH`, `API`, `PDF`, `PR`, `MCP`, `SQL`, `CI`).
+  Human-facing title shown in Codex UI skill lists and chips. Generated automatically from the skill name if not provided (e.g., `gh-address-comments` → `"GH Address Comments"`). Use proper casing; well-known acronyms are uppercased automatically (`GH`, `API`, `PDF`, `PR`, `MCP`, `SQL`, `CI`, `CLI`, `LLM`, `UI`, `URL`).
 
   ```yaml
   display_name: "GH Address Comments"
@@ -132,12 +132,12 @@ This example is adapted directly from the `openai_yaml.md` reference in the skil
 
 ```yaml
 interface:
-  display_name: "Optional user-facing name"
-  short_description: "Optional user-facing description"
+  display_name: "My Skill"
+  short_description: "Does something useful and fast"
   icon_small: "./assets/small-400px.png"
   icon_large: "./assets/large-logo.svg"
   brand_color: "#3B82F6"
-  default_prompt: "Optional surrounding prompt to use the skill with"
+  default_prompt: "Use $my-skill to complete my task."
 
 dependencies:
   tools:

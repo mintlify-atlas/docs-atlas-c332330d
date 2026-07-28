@@ -1,5 +1,5 @@
 ---
-title: "Skill Creator: Build Custom Codex Skills"
+title: "Skill Creator: Scaffold and Validate Custom Codex Skills"
 sidebarTitle: "Skill Creator"
 description: "Guides Codex through designing, scaffolding, and validating new skills — from clarifying the use case all the way to a production-ready skill folder."
 ---
@@ -31,7 +31,7 @@ Skills are modular, self-contained folders that extend Codex with specialized kn
 
 ## Anatomy of a skill
 
-```
+```text
 skill-name/
 ├── SKILL.md                  # Required — frontmatter + instructions
 ├── agents/
@@ -170,16 +170,16 @@ The skill folder should contain only what helps another Codex instance do the jo
 
 Just describe what you want to build in natural language:
 
-```
+```text
 Create a skill that rotates and crops PDF files.
 ```
 
-```
+```text
 Build a skill for querying our BigQuery tables — 
 here are the schema docs: [paste schema]
 ```
 
-```
+```text
 Update the openai.yaml for my existing pdf-editor skill.
 ```
 

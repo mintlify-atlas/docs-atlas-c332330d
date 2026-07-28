@@ -1,7 +1,7 @@
 ---
-title: "GitHub PR Comment Skill: Address Review Comments"
+title: "GitHub PR Comment Skill: Address All Review Comments"
 sidebarTitle: "PR Comments"
-description: "Find and address GitHub PR review comments using the gh CLI: fetch threads, summarize required fixes, and apply changes only after your approval."
+description: "Find and address GitHub PR review comments using the GitHub CLI: fetch threads, summarize fixes, and apply changes only after your approval."
 ---
 
 The **gh-address-comments** skill guides Codex through the full lifecycle of a pull request review: it locates the open PR for the current branch, fetches every review thread and inline comment, presents a numbered summary to you, and applies targeted fixes only for the comments you approve. All `gh` calls run with elevated network access so GitHub API requests succeed even in sandboxed environments.
@@ -42,10 +42,10 @@ If `gh` hits auth or rate-limit errors mid-run, run `gh auth login` again and re
     Codex runs the bundled `fetch_comments.py` script, which prints all review threads and inline comments on the PR associated with the current branch.
 
     ```bash
-    python "$SKILL_PATH/scripts/fetch_comments.py"
+    python scripts/fetch_comments.py
     ```
 
-    The script outputs a structured list of every open thread, including the file path, line number, author, and comment body.
+    The script outputs a JSON object containing every conversation comment, review submission, and inline review thread — including each thread's file path, line, author, and comment body.
   </Step>
 
   <Step title="Ask for your approval">
@@ -71,13 +71,13 @@ If `gh` hits auth or rate-limit errors mid-run, run `gh auth login` again and re
 
 ## The `fetch_comments.py` Script
 
-The bundled script uses `gh` to retrieve all PR review threads and top-level comments in a single pass. It handles pagination automatically and prints output in a format that Codex can number and summarize.
+The bundled script uses `gh api graphql` to retrieve all PR review threads and top-level comments in a single pass. It handles pagination automatically across conversation comments, review submissions, and inline review threads, and prints the result as JSON that Codex can number and summarize.
 
 Key behaviors:
 
 - Resolves the current branch to its open PR automatically
-- Fetches both inline review comments and issue-style PR comments
-- Exits non-zero if no open PR is found, so automation pipelines can detect the error
+- Fetches conversation comments, review submissions, and inline review threads
+- Exits non-zero if no open PR is found or if authentication fails, so automation pipelines can detect the error
 
 ## Authentication Handling
 
@@ -89,14 +89,6 @@ Key behaviors:
     If `gh` returns an auth or rate-limit error during comment fetching or fixing, the skill pauses and asks you to re-run `gh auth login` before retrying.
   </Card>
 </CardGroup>
-
-## Default Prompt
-
-When launched directly from the Codex skill menu, this skill starts with:
-
-> "Address all actionable GitHub PR review comments in this branch and summarize the updates."
-
-You can override this at any time by typing a more specific instruction, such as "Only address comments from @alice" or "Fix the type errors mentioned in the review."
 
 ## Installing
 

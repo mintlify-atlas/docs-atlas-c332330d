@@ -1,5 +1,5 @@
 ---
-title: "Playwright Interactive: Live Browser Sessions"
+title: "Playwright Interactive Skill: Live Browser Sessions"
 sidebarTitle: "Interactive"
 description: "Persistent Playwright sessions via js_repl for iterative UI debugging of web apps and Electron, with full desktop and mobile viewport support."
 ---
@@ -53,12 +53,11 @@ Run once per workspace directory before using the skill:
 ```bash
 test -f package.json || npm init -y
 npm install playwright
-
-# For web (headed Chromium or mobile emulation):
-npx playwright install chromium
-
-# Verify the import works:
-node -e "import('playwright').then(() => console.log('playwright import ok')).catch((e) => { console.error(e); process.exit(1); })"
+# Web-only, for headed Chromium or mobile emulation:
+# npx playwright install chromium
+# Electron-only, and only if the target workspace is the app itself:
+# npm install --save-dev electron
+node -e "import('playwright').then(() => console.log('playwright import ok')).catch((error) => { console.error(error); process.exit(1); })"
 ```
 
 If you switch to a different workspace, repeat setup there.

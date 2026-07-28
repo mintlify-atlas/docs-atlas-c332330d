@@ -1,5 +1,5 @@
 ---
-title: "Image Generation Skill: AI Images from Codex"
+title: "Image Generation Skill: Create and Edit AI Images"
 sidebarTitle: "Image Gen"
 description: "Generate or edit raster images directly from Codex — photos, sprites, UI mockups, product shots, and transparent cutouts via the OpenAI Image API."
 ---
@@ -135,17 +135,34 @@ uv pip install pillow
 
 | Parameter | Values | Notes |
 |---|---|---|
+| `--model` | `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini` | Default: `gpt-image-1.5` |
+| `--prompt` | string | Prompt text (mutually exclusive with `--prompt-file`) |
+| `--prompt-file` | path | Read prompt from a file (mutually exclusive with `--prompt`) |
 | `--size` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` | Default: `1024x1024` |
 | `--quality` | `low`, `medium`, `high`, `auto` | Default: `auto` |
 | `--background` | `transparent`, `opaque`, `auto` | Controls output transparency |
 | `--output-format` | `png`, `jpeg`, `webp` | Default: `png` |
 | `--output-compression` | `0`–`100` | JPEG/WebP only |
-| `--input-fidelity` | `low`, `high` | Edit subcommand only |
-| `--mask` | path to PNG mask | Edit subcommand only |
 | `--n` | `1`–`10` | Number of variants per prompt |
-| `--model` | `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini` | Default: `gpt-image-1.5` |
-| `--dry-run` | — | Print payload without making an API call |
+| `--out` | path | Output file path |
+| `--out-dir` | path | Output directory; auto-names files `image_1.png`, etc. |
 | `--force` | — | Overwrite if output file already exists |
+| `--dry-run` | — | Print payload without making an API call |
+| `--moderation` | `auto`, `low` | Moderation level (default: `auto`) |
+| `--augment` / `--no-augment` | — | Enable or disable structured prompt augmentation (default: on) |
+| `--use-case` | string | Taxonomy slug for prompt augmentation |
+| `--style` | string | Style/medium hint for prompt augmentation |
+| `--composition` | string | Composition/framing hint for prompt augmentation |
+| `--constraints` | string | Constraints for prompt augmentation |
+| `--input-fidelity` | `low`, `high` | Edit subcommand only |
+| `--image` | path (repeatable) | Input image(s) for the edit subcommand |
+| `--mask` | path to PNG mask | Edit subcommand only |
+| `--input` | path to JSONL | `generate-batch` subcommand only |
+| `--concurrency` | `1`–`25` | Parallel jobs for `generate-batch` (default: `5`) |
+| `--max-attempts` | `1`–`10` | Retry attempts per job in `generate-batch` (default: `3`) |
+| `--fail-fast` | — | Abort `generate-batch` on first job failure |
+| `--downscale-max-dim` | integer | Also write a downscaled copy capped at this pixel dimension |
+| `--downscale-suffix` | string | Suffix for downscaled copy filename (default: `-web`) |
 
 ### Generate a single image
 
@@ -198,7 +215,7 @@ rm -f tmp/imagegen/prompts.jsonl
 ```
 
 <Info>
-  `generate-batch` requires `--out-dir`. Use `--concurrency` to set parallelism (default `5`). Per-job overrides like `size`, `quality`, `background`, and `output_format` are supported directly in each JSONL row.
+  `generate-batch` requires `--out-dir`. Use `--concurrency` to set parallelism (default `5`, max `25`). Per-job overrides including `size`, `quality`, `background`, `output_format`, `output_compression`, `moderation`, `n`, `model`, `out`, and all prompt-augmentation fields are supported directly in each JSONL row.
 </Info>
 
 ### Output path conventions (CLI only)

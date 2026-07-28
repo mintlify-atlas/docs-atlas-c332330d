@@ -25,7 +25,7 @@ By default, the curated skill listing points to `https://github.com/openai/skill
 
 The simplest installation path. Provide the skill name and the installer fetches it from `skills/.curated`:
 
-```
+```text
 $skill-installer gh-address-comments
 ```
 
@@ -41,7 +41,7 @@ scripts/install-skill-from-github.py \
 
 For experimental skills, specify the `.experimental` folder explicitly:
 
-```
+```text
 $skill-installer install the create-plan skill from the .experimental folder
 ```
 
@@ -57,7 +57,7 @@ scripts/install-skill-from-github.py \
 
 Provide any GitHub directory URL directly — useful for skills in forks, private repos, or branches:
 
-```
+```text
 $skill-installer install https://github.com/openai/skills/tree/main/skills/.experimental/create-plan
 ```
 
@@ -187,7 +187,7 @@ scripts/list-skills.py --repo myorg/my-skills --path skills
 
 Skills are always installed to `$CODEX_HOME/skills/<skill-name>`. If `CODEX_HOME` is not set, it defaults to `~/.codex`. The installer aborts if the destination directory already exists — it will not overwrite an existing skill.
 
-```
+```text
 ~/.codex/
 └── skills/
     ├── gh-address-comments/

@@ -1,5 +1,5 @@
 ---
-title: "Render Deploy Skill: Deploy Services to Render"
+title: "Render Deploy Skill: Deploy Apps and Services from Codex"
 sidebarTitle: "Render"
 description: "Deploy web services, workers, cron jobs, and databases to Render from Codex using Blueprint IaC files or direct MCP-based service creation."
 ---
@@ -178,8 +178,8 @@ Render supports five service types, and Codex picks the right one automatically:
   <Card title="Cron (`type: cron`)" icon="clock">
     Scheduled tasks that run on a cron schedule, complete, then shut down. Uses standard cron syntax in UTC.
   </Card>
-  <Card title="Static (`runtime: static`)" icon="file">
-    SPAs and static sites served via CDN. Set `staticPublishPath` to your build output directory (`./dist`, `./build`, etc.).
+  <Card title="Static (`type: web`, `runtime: static`)" icon="file">
+    SPAs and static sites served via CDN. Uses `type: web` with `runtime: static`. Set `staticPublishPath` to your build output directory (`./dist`, `./build`, etc.).
   </Card>
   <Card title="Private (`type: pserv`)" icon="lock">
     Internal-only services accessible via `.render-internal.com` — microservices, database proxies, admin tools.

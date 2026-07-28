@@ -1,5 +1,5 @@
 ---
-title: "Skill Installer: Add Skills to Codex"
+title: "Skill Installer: Browse and Install Skills in Codex"
 sidebarTitle: "Skill Installer"
 description: "Lists installable skills from the openai/skills curated catalog and installs them — or any skill from a GitHub repo — into your Codex environment."
 ---
@@ -40,7 +40,7 @@ This skill activates when you:
 
 All skills land in:
 
-```
+```text
 $CODEX_HOME/skills/<skill-name>
 ```
 
@@ -94,7 +94,7 @@ scripts/list-skills.py
 
 Output format:
 
-```
+```text
 Skills from openai/skills:
 1. pdf-editor
 2. csv-analyzer (already installed)
@@ -142,7 +142,7 @@ scripts/install-skill-from-github.py \
 | Flag | Description | Default |
 |---|---|---|
 | `--path` | Catalog path inside `openai/skills` | `skills/.curated` |
-| `--format` | Output format: default prose or `json` | prose |
+| `--format` | Output format: `text` or `json` | `text` |
 
 ## Download behavior
 
@@ -164,7 +164,7 @@ scripts/install-skill-from-github.py \
 
 Ask Codex:
 
-```
+```text
 What skills are available to install?
 ```
 
@@ -172,7 +172,7 @@ Codex will list the curated catalog with installed annotations and ask which one
 
 ### Install a specific skill by name
 
-```
+```text
 Install the pdf-editor skill.
 ```
 
@@ -180,7 +180,7 @@ Codex will run `install-skill-from-github.py` targeting `skills/.curated/pdf-edi
 
 ### Install from your own private repo
 
-```
+```text
 Install the analytics skill from github.com/my-org/my-repo at tools/skills/analytics.
 ```
 
@@ -188,7 +188,7 @@ Codex will resolve the repo and path, request sandbox escalation for network acc
 
 ### Install an experimental skill
 
-```
+```text
 Show me the experimental skills and install the data-viz one.
 ```
 

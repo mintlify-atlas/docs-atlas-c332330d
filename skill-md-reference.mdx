@@ -18,10 +18,6 @@ description: What this skill does and when to use it. Codex reads this to decide
 ---
 ```
 
-<Note>
-  The `metadata:` sub-block that appears in some skills (e.g., `metadata: short-description: ...`) is **not** used by Codex for triggering or loading decisions. Only `name` and `description` determine when a skill activates. Metadata sub-fields exist for other tooling purposes and can be safely ignored when writing new skills.
-</Note>
-
 ### `name` (required)
 
 The skill name. Must match the skill's directory name exactly. Rules: lowercase letters, digits, and hyphens only; maximum 64 characters; no leading or trailing hyphens.
@@ -140,6 +136,20 @@ Choose the structure that best fits the skill's purpose. These patterns can be m
 3. Roadmap planning
 ...
 ```
+
+## Progressive Disclosure
+
+Skills use a three-level loading system to manage context efficiently:
+
+1. **Metadata (`name` + `description`)** — Always in context (~100 words). Codex reads every installed skill's metadata on every turn to decide which skills are relevant.
+2. **SKILL.md body** — Loaded when the skill triggers. Target under 5,000 words and 500 lines. Content beyond this limit should live in reference files.
+3. **Bundled resources** — Loaded on demand as Codex determines they are needed. Scripts can also be executed directly without being loaded into the context window at all.
+
+This layered approach keeps the default context footprint small. Only metadata is always present; everything else is loaded only when it is actually needed.
+
+<Note>
+  Keep the SKILL.md body under 500 lines. If you are approaching that limit, split content into `references/` files and add explicit pointers in SKILL.md describing when to read them.
+</Note>
 
 ## What Goes in SKILL.md vs. Reference Files
 

@@ -20,13 +20,13 @@ Before you begin:
   <Step title="Open Codex and list available skills">
     Start a new Codex session and type the following to invoke the skill-installer:
 
-    ```
+    ```text
     $skill-installer
     ```
 
     Codex will call the `list-skills.py` helper script and display the available curated skills from `skills/.curated`, annotating any that are already installed:
 
-    ```
+    ```text
     Skills from openai/skills:
     1. gh-address-comments
     2. vercel-deploy (already installed)
@@ -38,7 +38,7 @@ Before you begin:
   <Step title="Install a skill by name">
     Install the `gh-address-comments` skill by referencing it directly:
 
-    ```
+    ```text
     $skill-installer gh-address-comments
     ```
 
@@ -56,7 +56,7 @@ Before you begin:
   <Step title="Use the skill">
     In your next session, navigate to a repository with an open pull request and ask Codex to address the PR comments:
 
-    ```
+    ```text
     Address the review comments on my current PR
     ```
 
@@ -70,13 +70,13 @@ Experimental skills live in `skills/.experimental` and are not included in the d
 
 **By folder name:**
 
-```
+```text
 $skill-installer install the create-plan skill from the .experimental folder
 ```
 
 **By full GitHub URL:**
 
-```
+```text
 $skill-installer install https://github.com/openai/skills/tree/main/skills/.experimental/create-plan
 ```
 
